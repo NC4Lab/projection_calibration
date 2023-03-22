@@ -1,0 +1,69 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "NanoSVG",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "nanosvg::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-nanosvg-Debug-3f227ce453a60bd422bd.json",
+					"name" : "nanosvg",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "nanosvgrast::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-nanosvgrast-Debug-281de5b55edd8a830991.json",
+					"name" : "nanosvgrast",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/ws/src/projection_calibration/nanosvg-master/out/build/x64-Debug",
+		"source" : "C:/ws/src/projection_calibration/nanosvg-master"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 2
+	}
+}

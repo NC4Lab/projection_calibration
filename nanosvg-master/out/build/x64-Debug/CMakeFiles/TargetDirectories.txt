@@ -1,0 +1,7 @@
+C:/ws/src/projection_calibration/nanosvg-master/out/build/x64-Debug/CMakeFiles/nanosvg.dir
+C:/ws/src/projection_calibration/nanosvg-master/out/build/x64-Debug/CMakeFiles/nanosvgrast.dir
+C:/ws/src/projection_calibration/nanosvg-master/out/build/x64-Debug/CMakeFiles/install/local.dir
+C:/ws/src/projection_calibration/nanosvg-master/out/build/x64-Debug/CMakeFiles/install.dir
+C:/ws/src/projection_calibration/nanosvg-master/out/build/x64-Debug/CMakeFiles/edit_cache.dir
+C:/ws/src/projection_calibration/nanosvg-master/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
+C:/ws/src/projection_calibration/nanosvg-master/out/build/x64-Debug/CMakeFiles/list_install_components.dir
