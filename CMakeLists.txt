@@ -172,6 +172,7 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 target_link_libraries(${PROJECT_NAME}_node 
 	${catkin_LIBRARIES}
 	${Boost_LIBRARIES}
+	"C:/Program Files (x86)/GLFW/lib/glfw3.lib"
 	glfw GLAD
 	)
 

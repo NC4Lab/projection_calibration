@@ -1,12 +1,21 @@
 
 //#define BOOST_BIND_NO_PLACEHOLDERS
-//#include <glfw-3.3.8/deps/glad/gl.h>
-#include <ros/ros.h>
-#include <windows.h>
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+#include <boost/bind/bind.hpp>
+
+// Rest of your code
 #define GLAPIENTRY APIENTRY
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include "glad/glad.h"
+#include <GL/gl.h>
+//#include <GL/glcorearb.h>
+//#include <GL/glu.h>  // Include GLU library for gluErrorString()
+//#include <glfw-3.3.8/deps/glad/gl.h>
+#include <ros/ros.h>
+#include <ros/console.h>
+//#include <windows.h>
+
 //#include <gl/GL.h>
 //#include <gl/GLU.h>
 #include <cstdio>
@@ -36,7 +45,8 @@
 ////void toggleFullscreen();
 //void keyPressed(unsigned char, int, int);
 //void init();
-void display();
+//void display();
+//void err_callback();
 int main(int, char**);
 //void loadPNG(const char* filename);
 
