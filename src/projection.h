@@ -5,10 +5,10 @@
 
 // Rest of your code
 #define GLAPIENTRY APIENTRY
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 #include "glad/glad.h"
-#include <GL/gl.h>
+#define GLFW_INCLUDE_NONE 
+#include <GLFW/glfw3.h>
+// #include <GL/gl.h>
 //#include <GL/glcorearb.h>
 //#include <GL/glu.h>  // Include GLU library for gluErrorString()
 //#include <glfw-3.3.8/deps/glad/gl.h>

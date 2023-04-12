@@ -40,7 +40,10 @@ void checkGLError()
 //    }
 //}
 
-
+static void error_callback(int error, const char* description)
+{
+    ROS_ERROR("Error: %s\n", description);
+}
 
 int main(int argc, char** argv) {
 
@@ -48,7 +51,7 @@ int main(int argc, char** argv) {
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
 	ROS_ERROR("main ran");
-    checkGLError();
+    // checkGLError();
     //const GLubyte* version = glGetString(GL_VERSION);
     //checkGLError();
     //if (version)
@@ -64,6 +67,7 @@ int main(int argc, char** argv) {
 
     //glDebugMessageCallback(err_callback, nullptr);
     // Initialize GLFW
+     glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) {
         ROS_ERROR("glfw init issue");
@@ -80,6 +84,9 @@ int main(int argc, char** argv) {
     // Set the window as the current OpenGL context
     glfwMakeContextCurrent(window);
 	ROS_ERROR("window ran");
+
+    gladLoadGL();
+    glfwSwapInterval(1);
 
     // Set the window resize callback
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -111,7 +118,7 @@ int main(int argc, char** argv) {
         glVertex2f(0.6f, 1.0f);
         glVertex2f(0.6f, 0.6f);
         glVertex2f(0.2f, 0.6f);
-        //glEnd();
+        glEnd();
         // Swap the buffers
         glfwSwapBuffers(window);
 
@@ -123,6 +130,7 @@ int main(int argc, char** argv) {
             break;
     }
 
+    glfwDestroyWindow(window);
     // Terminate GLFW
     glfwTerminate();
 
