@@ -33,6 +33,10 @@
 #include "../nanosvg-master/src/nanosvgrast.h"
 //#include <GL/gl.h>
 
+float r = 140.0f / 255.0f;
+float g = 72.0f / 255.0f;
+float b = 159.0f / 255.0f;
+
 //#include "C://GL/GLAD/src/"
 //#include "../glfw-3.3.8/deps/glad/gl.h"
 //#include "../glfw-3.3.8/deps/glad/vk_platform.h"
@@ -48,6 +52,8 @@
 //void display();
 //void err_callback();
 int main(int, char**);
+
+
 //void loadPNG(const char* filename);
 
 

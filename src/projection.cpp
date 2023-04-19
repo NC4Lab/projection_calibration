@@ -2,20 +2,19 @@
 #include "projection.h"
 
 using namespace std;
-
+float squarePositions[4][2] = {
+    {0.0f, 0.0f},   // top-left square
+    {0.1f, 0.1f},   // top-right square
+    {-0.1f, 0.1f},  // bottom-left square
+    {-0.1f, -0.1f}  // bottom-right square
+};
+int selectedSquare = 0;
 
 // Callback function for handling window resize events
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
-
-//void err_callback() {
-//
-//    GLenum err;
-//    err = glGetError();
-//    ROS_ERROR(err);
-//}
 
 void checkGLError()
 {
@@ -24,25 +23,14 @@ void checkGLError()
         ROS_ERROR("OpenGL error: %d", static_cast<int>(err));
     }
 }
-//void err_callback() {
-//    GLenum err = glGetError();
-//    if (err != GL_NO_ERROR) {
-//        const char* errorString = reinterpret_cast<const char*>(gluErrorString(err));
-//        ROS_ERROR("OpenGL error: %s", errorString);
-//    }
-//}
-//void APIENTRY err_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
-//{
-//    // Your error handling code here
-//
-//    GLenum err = glGetError();
-//    if (err != GL_NO_ERROR) {
-//    }
-//}
 
 static void error_callback(int error, const char* description)
 {
     ROS_ERROR("Error: %s\n", description);
+}
+
+void drawSquare(float x, float y, float size) {
+    glRectf(x, y, x + size, y + size);
 }
 
 int main(int argc, char** argv) {
@@ -51,22 +39,6 @@ int main(int argc, char** argv) {
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
 	ROS_ERROR("main ran");
-    // checkGLError();
-    //const GLubyte* version = glGetString(GL_VERSION);
-    //checkGLError();
-    //if (version)
-    //{
-    //    ROS_ERROR("OpenGL version: %s", reinterpret_cast<const char*>(version));
-    //    std::cout << "OpenGL version: " << version << std::endl;
-    //}
-    //else
-    //{
-    //    ROS_ERROR("GL TOH NAHI HAI");
-    //    //std::cerr << "Failed to get OpenGL version string" << std::endl;
-    //}
-
-    //glDebugMessageCallback(err_callback, nullptr);
-    // Initialize GLFW
      glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) {
@@ -74,7 +46,9 @@ int main(int argc, char** argv) {
         return -1;
     }
     // Create a window with a 4K resolution (3840x2160)
-    GLFWwindow* window = glfwCreateWindow(3840, 2160, "GLFW 4K Window", NULL, NULL);
+    int width = 3840; 
+    int height = 2160;
+    GLFWwindow* window = glfwCreateWindow(width,height, "GLFW 4K Window", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -95,35 +69,46 @@ int main(int argc, char** argv) {
     {
         //glfwPollEvents();
         // Clear the screen
-		ROS_ERROR("while ran1");
+		//ROS_ERROR("while ran1")
+
+        // Listen for arrow key input to move selected square
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+            squarePositions[selectedSquare][0] -= 0.01f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+            squarePositions[selectedSquare][0] += 0.01f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+            squarePositions[selectedSquare][1] += 0.01f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+            squarePositions[selectedSquare][1] -= 0.01f;
+        }
+
+        // Draw squares with updated positions
         glClear(GL_COLOR_BUFFER_BIT);
 
-		ROS_ERROR("while ran2");
-        // Draw 80x80 pixel boxes using OpenGL commands
-        glBegin(GL_QUADS);
-        glColor3f(1.0f, 0.0f, 0.0f);  // Red color
-        glVertex2f(-1.0f, 1.0f);
-        glVertex2f(-0.6f, 1.0f);
-        glVertex2f(-0.6f, 0.6f);
-        glVertex2f(-1.0f, 0.6f);
+        for (int i = 0; i < 4; i++) {
+            //int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
+            //int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * height);
 
-        glColor3f(0.0f, 1.0f, 0.0f);  // Green color
-        glVertex2f(-0.4f, 1.0f);
-        glVertex2f(0.0f, 1.0f);
-        glVertex2f(0.0f, 0.6f);
-        glVertex2f(-0.4f, 0.6f);
+            // Draw square with pixel coordinates
+            //glColor3f(1.0f, 0.0f, 0.0f);
+           
+            if (i == selectedSquare) {
+                glColor3f(1.0f, 1.0f, 1.0f);  // selected square is white
+            }
+            else {
+                glColor3f(r,g,b);  // other squares are red
+            }
+            //drawSquare(pixelX, pixelY, 20.0f);
+            drawSquare(squarePositions[i][0], squarePositions[i][1], 0.1f);
+        }
 
-        glColor3f(0.0f, 0.0f, 1.0f);  // Blue color
-        glVertex2f(0.2f, 1.0f);
-        glVertex2f(0.6f, 1.0f);
-        glVertex2f(0.6f, 0.6f);
-        glVertex2f(0.2f, 0.6f);
-        glEnd();
         // Swap the buffers
         glfwSwapBuffers(window);
+        glfwPollEvents();
 
-        // Wait for events or a short delay (in milliseconds)
-        glfwWaitEventsTimeout(0.010);
 
         // Exit the loop when the window is closed or escape key is pressed
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwWindowShouldClose(window))
