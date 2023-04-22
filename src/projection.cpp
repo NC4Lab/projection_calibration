@@ -3,12 +3,15 @@
 
 using namespace std;
 float squarePositions[4][2] = {
-    {0.0f, 0.0f},   // top-left square
+    {0.0f, 0.0f},   // bottom-right square
     {0.1f, 0.1f},   // top-right square
-    {-0.1f, 0.1f},  // bottom-left square
-    {-0.1f, -0.1f}  // bottom-right square
+    {-0.1f, 0.1f},  // top-left square
+    {-0.1f, -0.1f}  // bottom-left square
 };
 int selectedSquare = 0;
+int width = 3840; 
+int height = 2160;
+
 
 // Callback function for handling window resize events
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -29,8 +32,61 @@ static void error_callback(int error, const char* description)
     ROS_ERROR("Error: %s\n", description);
 }
 
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+
+        if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
+            selectedSquare = 0;
+        }
+        if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
+            selectedSquare = 1;
+        }
+        if (key == GLFW_KEY_3 && action == GLFW_RELEASE) {
+            selectedSquare = 2;
+        }
+        if (key == GLFW_KEY_4 && action == GLFW_RELEASE) {
+            selectedSquare = 3;
+        }
+
+
+        // Listen for arrow key input to move selected square
+        if (key == GLFW_KEY_LEFT && action == GLFW_RELEASE) {
+            squarePositions[selectedSquare][0] -= 0.01f;
+        }
+
+        //@rony: fix the stuff below
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+            squarePositions[selectedSquare][0] += 0.01f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+            squarePositions[selectedSquare][1] += 0.01f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+            squarePositions[selectedSquare][1] -= 0.01f;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+            saveCoordinates();
+        }
+
+
+
+}
+
 void drawSquare(float x, float y, float size) {
     glRectf(x, y, x + size, y + size);
+}
+
+void saveCoordinates() {
+	for (int i = 0; i < 4; i++) {
+		int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
+		int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * height);
+		ROS_ERROR("Square %d position: (%d, %d)\n", i, pixelX, pixelY);
+	}
+
+
+			
+
+
 }
 
 int main(int argc, char** argv) {
@@ -39,15 +95,13 @@ int main(int argc, char** argv) {
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
 	ROS_ERROR("main ran");
-     glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(error_callback);
 
     if (!glfwInit()) {
         ROS_ERROR("glfw init issue");
         return -1;
     }
     // Create a window with a 4K resolution (3840x2160)
-    int width = 3840; 
-    int height = 2160;
     GLFWwindow* window = glfwCreateWindow(width,height, "GLFW 4K Window", NULL, NULL);
     if (!window)
     {
@@ -61,6 +115,8 @@ int main(int argc, char** argv) {
 
     gladLoadGL();
     glfwSwapInterval(1);
+    glfwSetKeyCallback(window, keyCallback);
+
 
     // Set the window resize callback
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -71,19 +127,6 @@ int main(int argc, char** argv) {
         // Clear the screen
 		//ROS_ERROR("while ran1")
 
-        // Listen for arrow key input to move selected square
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-            squarePositions[selectedSquare][0] -= 0.01f;
-        }
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-            squarePositions[selectedSquare][0] += 0.01f;
-        }
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-            squarePositions[selectedSquare][1] += 0.01f;
-        }
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-            squarePositions[selectedSquare][1] -= 0.01f;
-        }
 
         // Draw squares with updated positions
         glClear(GL_COLOR_BUFFER_BIT);
@@ -92,9 +135,6 @@ int main(int argc, char** argv) {
             //int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
             //int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * height);
 
-            // Draw square with pixel coordinates
-            //glColor3f(1.0f, 0.0f, 0.0f);
-           
             if (i == selectedSquare) {
                 glColor3f(1.0f, 1.0f, 1.0f);  // selected square is white
             }
