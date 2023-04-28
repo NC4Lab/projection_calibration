@@ -1,5 +1,11 @@
 #include <ros/ros.h>
 #include "projection.h"
+//#include "../dll/*"
+//#include"../dll/ILU.dll"
+//#include"../dll/DevIL.dll"
+//#include"../dll/ILUT.dll"
+
+
 
 using namespace std;
 float squarePositions[4][2] = {
@@ -32,6 +38,15 @@ static void error_callback(int error, const char* description)
     ROS_ERROR("Error: %s\n", description);
 }
 
+void saveCoordinates() {
+	for (int i = 0; i < 4; i++) {
+		int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
+		int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * height);
+		ROS_ERROR("Square %d position: (%d, %d)\n", i, pixelX, pixelY);
+	}
+
+}
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 
         if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
@@ -54,13 +69,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         }
 
         //@rony: fix the stuff below
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+        if (key == GLFW_KEY_RIGHT && action == GLFW_RELEASE) {
             squarePositions[selectedSquare][0] += 0.01f;
         }
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        if (key == GLFW_KEY_UP && action == GLFW_RELEASE) {
             squarePositions[selectedSquare][1] += 0.01f;
         }
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        if (key == GLFW_KEY_DOWN && action == GLFW_RELEASE) {
             squarePositions[selectedSquare][1] -= 0.01f;
         }
 
@@ -76,26 +91,21 @@ void drawSquare(float x, float y, float size) {
     glRectf(x, y, x + size, y + size);
 }
 
-void saveCoordinates() {
-	for (int i = 0; i < 4; i++) {
-		int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
-		int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * height);
-		ROS_ERROR("Square %d position: (%d, %d)\n", i, pixelX, pixelY);
-	}
-
-
-			
-
-
-}
-
 int main(int argc, char** argv) {
 
+	//NSVGimage *svg = NULL;
+	//NSVGrasterizer *rast = NULL;
     ros::init(argc, argv, "Projection", ros::init_options::AnonymousName);
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
 	ROS_ERROR("main ran");
+   // ilutInit();
     glfwSetErrorCallback(error_callback);
+    //svg = nsvgParseFromFile("the_box.svg", "px", 96.0f);
+
+    // Create a rasterizer and set its parameters
+    //NSVGrasterizer* rast = nsvgCreateRasterizer();
+    //nsvgRasterizerScanline(rast, NULL, NULL, 800, 600);
 
     if (!glfwInit()) {
         ROS_ERROR("glfw init issue");
@@ -130,6 +140,8 @@ int main(int argc, char** argv) {
 
         // Draw squares with updated positions
         glClear(GL_COLOR_BUFFER_BIT);
+        //nsvgRasterize(rast, svg, 0, 0, 1.0f, NULL, 0, 0, 800, 600);
+
 
         for (int i = 0; i < 4; i++) {
             //int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
@@ -155,6 +167,8 @@ int main(int argc, char** argv) {
             break;
     }
 
+    //nsvgDelete(svg);
+    //nsvgDeleteRasterizer(rast);
     glfwDestroyWindow(window);
     // Terminate GLFW
     glfwTerminate();

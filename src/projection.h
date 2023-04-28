@@ -51,6 +51,7 @@ float b = 159.0f / 255.0f;
 //void init();
 //void display();
 //void err_callback();
+void saveCoordinates();
 int main(int, char**);
 
 

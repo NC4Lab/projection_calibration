@@ -119,7 +119,7 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-set(PROJECTION_DIR C:/ws/projection_calibration)
+set(PROJECTION_DIR C:/ws/src/projection_calibration)
 set(glfw3_DIR "C:/Program Files (x86)/GLFW/lib/cmake/glfw3/")
 
 ## Specify additional locations of header files
@@ -128,8 +128,10 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
   #${PROJECTION_DIR}/glfw-3.3.8/include
-  ${PROJECTION_DIR}/glfw-3.3.8/deps/glad
+ # ${PROJECTION_DIR}/glfw-3.3.8/deps/glad
   ${glfw3_DIR}/../../../include
+ # ${PROJECTION_DIR}/dll
+
 )
 
 # find_package(OpenGL REQUIRED)
@@ -172,8 +174,8 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 target_link_libraries(${PROJECT_NAME}_node 
 	${catkin_LIBRARIES}
 	${Boost_LIBRARIES}
-	glfw GLAD
-	)
+	glfw GLAD #IL ILUT devIL
+		)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
