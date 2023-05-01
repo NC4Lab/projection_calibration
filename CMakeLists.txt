@@ -121,6 +121,9 @@ catkin_package(
 ###########
 set(PROJECTION_DIR C:/ws/src/projection_calibration)
 set(glfw3_DIR "C:/Program Files (x86)/GLFW/lib/cmake/glfw3/")
+set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include/")
+set(IL_LIB_DIR "C:/Program Files (x86)/IL/lib/x64/Release/")
+
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -130,17 +133,39 @@ include_directories(
   #${PROJECTION_DIR}/glfw-3.3.8/include
  # ${PROJECTION_DIR}/glfw-3.3.8/deps/glad
   ${glfw3_DIR}/../../../include
+  ${IL_INCLUDE_DIR}
+ # "C:/Program Files (x86)/IL/include"
  # ${PROJECTION_DIR}/dll
 
 )
 
 # find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
+find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS ${IL_LIB_DIR})
+find_library(ILU_LIBRARY NAMES ILU PATHS ${IL_LIB_DIR})
+find_library(ILUT_LIBRARY NAMES ILUT PATHS ${IL_LIB_DIR})
+#find_library(ILUT_LIBRARY NAMES ILUT.lib PATH "C:/Program Files (x86)/IL/lib/x64/Release/ILUT.lib")
+#find_library(IL_LIBRARY NAMES DevIL ILU ILUT PATHS ${IL_LIB_DIR})
+#find_library(DEVIL_LIBRARIES NAMES DevIL ILU ILUT PATHS ${IL_LIBRARY})
+
+if(IL_LIBRARY)
+  message(STATUS "Found IL library: ${IL_LIBRARY}")
+else()
+  message(FATAL_ERROR "IL library not found")
+endif()
+if(ILU_LIBRARY)
+  message(STATUS "Found ILU library: ${ILU_LIBRARY}")
+#else()
+#  message(FATAL_ERROR "ILU library not found")
+endif()
+
+#find_package(IL REQUIRED)
 #add_subdirectory(glfw-3.3.8)
 #add_subdirectory(glfw-3.3.8/deps/glad)
 #add_subdirectory(nanosvg-master)
 
 add_library(GLAD src/glad.c)
+
 
 add_executable(${PROJECT_NAME}_node 
 	src/projection.cpp
@@ -174,9 +199,9 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 target_link_libraries(${PROJECT_NAME}_node 
 	${catkin_LIBRARIES}
 	${Boost_LIBRARIES}
-	glfw GLAD #IL ILUT devIL
-		)
-
+	${IL_LIBRARY} ${ILU_LIBRARY} ${ILUT_LIBRARY}	
+	glfw GLAD
+)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use

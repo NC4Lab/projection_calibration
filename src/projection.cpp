@@ -99,7 +99,18 @@ int main(int argc, char** argv) {
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
 	ROS_ERROR("main ran");
-   // ilutInit();
+    //ILuint image;
+    ilInit();
+    iluInit();
+    ilutInit();
+
+    //ilInit();
+
+    ilutRenderer(ILUT_OPENGL);
+
+    //ilGenImages(1, &image);
+    //ilBindImage(image);
+    ilLoadImage("tj.png");
     glfwSetErrorCallback(error_callback);
     //svg = nsvgParseFromFile("the_box.svg", "px", 96.0f);
 
