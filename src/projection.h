@@ -16,6 +16,7 @@ using namespace boost::placeholders;
 
 //DevIL libraries
 #include<IL/il.h>
+#include<IL/devil_cpp_wrapper.hpp>
 #include<IL/ilu.h>
 #include<IL/ilut.h>
 

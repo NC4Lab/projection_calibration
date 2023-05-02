@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   genmsg
+  roslib
 #  OpenCV
 #  Qt5OpenGL
 )
@@ -112,7 +113,7 @@ catkin_package(
   INCLUDE_DIRS lodepng/
   INCLUDE_DIRS nanosvg-master/
 #  LIBRARIES projection_calibration OpenGL
-  CATKIN_DEPENDS roscpp std_msgs message_runtime
+  CATKIN_DEPENDS roscpp roslib std_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -121,7 +122,7 @@ catkin_package(
 ###########
 set(PROJECTION_DIR C:/ws/src/projection_calibration)
 set(glfw3_DIR "C:/Program Files (x86)/GLFW/lib/cmake/glfw3/")
-set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include/")
+set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include")
 set(IL_LIB_DIR "C:/Program Files (x86)/IL/lib/x64/Release/")
 
 

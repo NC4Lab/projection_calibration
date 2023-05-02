@@ -1,11 +1,7 @@
 #include <ros/ros.h>
+#include <ros/package.h>
+
 #include "projection.h"
-//#include "../dll/*"
-//#include"../dll/ILU.dll"
-//#include"../dll/DevIL.dll"
-//#include"../dll/ILUT.dll"
-
-
 
 using namespace std;
 float squarePositions[4][2] = {
@@ -15,8 +11,10 @@ float squarePositions[4][2] = {
     {-0.1f, -0.1f}  // bottom-left square
 };
 int selectedSquare = 0;
-int width = 3840; 
-int height = 2160;
+int winWidth = 3840; 
+int winHeight = 2160;
+
+ILint texWidth, texHeight;
 
 
 // Callback function for handling window resize events
@@ -40,8 +38,8 @@ static void error_callback(int error, const char* description)
 
 void saveCoordinates() {
 	for (int i = 0; i < 4; i++) {
-		int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
-		int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * height);
+		int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * winWidth);
+		int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * winHeight);
 		ROS_ERROR("Square %d position: (%d, %d)\n", i, pixelX, pixelY);
 	}
 
@@ -87,43 +85,79 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 }
 
-void drawSquare(float x, float y, float size) {
-    glRectf(x, y, x + size, y + size);
+void drawRect(float x, float y, float width, float height) {
+    glBegin(GL_QUADS);
+
+    //glTexCoord2f(x, y);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex2f(x, y);
+
+    //glTexCoord2f(x+texWidth, y);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex2f(x+width, y);
+
+    //glTexCoord2f(x+texWidth, y+texHeight);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex2f(x+width, y+height);
+
+    //glTexCoord2f(x, y+texHeight);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex2f(x, y+height);
+    glEnd();
+
 }
 
 int main(int argc, char** argv) {
 
-	//NSVGimage *svg = NULL;
-	//NSVGrasterizer *rast = NULL;
     ros::init(argc, argv, "Projection", ros::init_options::AnonymousName);
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
 	ROS_ERROR("main ran");
+
     //ILuint image;
-    ilInit();
-    iluInit();
-    ilutInit();
+    //ilInit();
+    //iluInit();
+    //ilutInit();
 
     //ilInit();
 
-    ilutRenderer(ILUT_OPENGL);
+    //ilutRenderer(ILUT_OPENGL);
 
-    //ilGenImages(1, &image);
-    //ilBindImage(image);
-    ilLoadImage("tj.png");
+    ILuint ImgId = 0;
+    ilGenImages(1, &ImgId);
+    ilBindImage(ImgId);
+
+
+    string packagePath = ros::package::getPath("projection_calibration");
+
+    string texFileName = packagePath + "/src/tj.bmp";
+
+    ROS_ERROR(texFileName.c_str());
+
+    ilLoad(IL_BMP, texFileName.c_str());
+
+    ROS_ERROR("Loading image: %s", iluErrorString(ilGetError()));
+
+    ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE);
+
+    ROS_ERROR("Converting image: %s", iluErrorString(ilGetError()));
+
+    texWidth = ilGetInteger(IL_IMAGE_WIDTH);
+    texHeight = ilGetInteger(IL_IMAGE_HEIGHT);
+
+    ROS_ERROR("%d", texWidth);
+    ROS_ERROR("%d", texHeight);
+
+    //ILubyte* imageData = ilGetData();
+
     glfwSetErrorCallback(error_callback);
-    //svg = nsvgParseFromFile("the_box.svg", "px", 96.0f);
-
-    // Create a rasterizer and set its parameters
-    //NSVGrasterizer* rast = nsvgCreateRasterizer();
-    //nsvgRasterizerScanline(rast, NULL, NULL, 800, 600);
 
     if (!glfwInit()) {
         ROS_ERROR("glfw init issue");
         return -1;
     }
     // Create a window with a 4K resolution (3840x2160)
-    GLFWwindow* window = glfwCreateWindow(width,height, "GLFW 4K Window", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(winWidth,winHeight, "GLFW 4K Window", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -137,35 +171,55 @@ int main(int argc, char** argv) {
     gladLoadGL();
     glfwSwapInterval(1);
     glfwSetKeyCallback(window, keyCallback);
-
+    GLuint textureID;
 
     // Set the window resize callback
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+
+    //glMatrixMode(GL_MODELVIEW);
+    //glLoadIdentity();
+    //glTranslatef(0, 0, 0);
+
+
     while (!glfwWindowShouldClose(window))
     {
-        //glfwPollEvents();
-        // Clear the screen
-		//ROS_ERROR("while ran1")
-
-
         // Draw squares with updated positions
         glClear(GL_COLOR_BUFFER_BIT);
-        //nsvgRasterize(rast, svg, 0, 0, 1.0f, NULL, 0, 0, 800, 600);
+		glGenTextures(1, &textureID);
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
+		// Load image data into texture
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH),
+            ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGB,
+            GL_UNSIGNED_BYTE, ilGetData());
+
+		// Enable texture mapping
+		glEnable(GL_TEXTURE_2D);
+
+
+
+			
 
         for (int i = 0; i < 4; i++) {
-            //int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
-            //int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * height);
+   //         //int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * width);
+   //         //int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * height);
 
-            if (i == selectedSquare) {
-                glColor3f(1.0f, 1.0f, 1.0f);  // selected square is white
-            }
-            else {
-                glColor3f(r,g,b);  // other squares are red
-            }
-            //drawSquare(pixelX, pixelY, 20.0f);
-            drawSquare(squarePositions[i][0], squarePositions[i][1], 0.1f);
+   //         //if (i == selectedSquare) {
+   //         //    glColor3f(1.0f, 1.0f, 1.0f);  // selected square is white
+   //         //}
+   //         //else {
+                //glColor3f(r,g,b);  // other squares are red
+   //         //}
+   //         //drawSquare(pixelX, pixelY, 20.0f);
+   //         float x = squarePositions[i][0];
+   //         float y = squarePositions[i][1];
+   //         float size = 0.1f;
+            drawRect(squarePositions[i][0], squarePositions[i][1], 0.1f, 0.2f);
         }
 
         // Swap the buffers
@@ -178,9 +232,8 @@ int main(int argc, char** argv) {
             break;
     }
 
-    //nsvgDelete(svg);
-    //nsvgDeleteRasterizer(rast);
     glfwDestroyWindow(window);
+    ilDeleteImages(1, &ImgId);
     // Terminate GLFW
     glfwTerminate();
 
