@@ -88,7 +88,20 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 }
 
 void drawSquare(float x, float y, float size) {
-    glRectf(x, y, x + size, y + size);
+    // Bind the texture
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    // Draw a quad with the texture
+    glBegin(GL_QUADS);
+    glTexCoord2f(x, y);
+    glVertex2f(-1, -1);
+    glTexCoord2f(x+size, y);
+    glVertex2f(1, -1);
+    glTexCoord2f(x+size, y+size);
+    glVertex2f(1, 1);
+    glTexCoord2f(x, y+size);
+    glVertex2f(-1, 1);
+    glEnd();
 }
 
 int main(int argc, char** argv) {
