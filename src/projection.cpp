@@ -104,7 +104,6 @@ void drawRect(float x, float y, float width, float height) {
     glTexCoord2f(0.0f, 1.0f);
     glVertex2f(x, y+height);
     glEnd();
-
 }
 
 int main(int argc, char** argv) {
