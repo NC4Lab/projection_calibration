@@ -45,6 +45,7 @@ static void error_callback(int error, const char* description)
 }
 
 void saveCoordinates() {
+    // returns the pixel position of the bottom left corner of rect
 	for (int i = 0; i < 4; i++) {
 		int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * winWidth);
 		int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * winHeight);
