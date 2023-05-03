@@ -90,12 +90,13 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             squarePositions[selectedSquare][1] -= 0.01f;
         }
 
-        if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+        if (key == GLFW_KEY_ENTER && action == GLFW_RELEASE) {
             saveCoordinates();
         }
 
-		monitors = glfwGetMonitors(&monitor_count);
-        if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) {
+
+        if (key == GLFW_KEY_F && action == GLFW_RELEASE) {
+			monitors = glfwGetMonitors(&monitor_count);
             //GLFWmonitor* monitor = glfwGetWindowMonitor(window);
             //const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 
@@ -129,7 +130,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
         }
 
-        if (glfwGetKey(window, GLFW_KEY_M) == GLFW_RELEASE) {
+        if (key == GLFW_KEY_M && action == GLFW_RELEASE) {
+			monitors = glfwGetMonitors(&monitor_count);
             monitorNumber++;
             monitor = monitors[monitorNumber % monitor_count];
             if (monitor) {
@@ -291,7 +293,7 @@ int main(int argc, char** argv) {
 
         for (int i = 0; i < 4; i++) {
             glBindTexture(GL_TEXTURE_2D, fboTexture);
-            drawRect(squarePositions[i][0], squarePositions[i][1], 0.1f, 0.2f);
+            drawRect(squarePositions[i][0], squarePositions[i][1], 0.1f, 0.1f);
         }
 
         // Swap the buffers
