@@ -33,11 +33,23 @@ using namespace boost::placeholders;
 //#include <gl/GLU.h>
 #include <cstdio>
 #include <cstdlib>
+
 //#include "../lodepng/lodepng.h"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <float.h>
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include "glm/glm.hpp"
+#include "glm/ext.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "learnopengl/shader_m.h"
+#include "learnopengl/camera.h" 
+using namespace glm;
+using namespace std;
+
 
 #include "../nanosvg-master/src/nanosvg.h"
 #include "../nanosvg-master/src/nanosvgrast.h"

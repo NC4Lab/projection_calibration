@@ -120,10 +120,12 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-set(PROJECTION_DIR C:/ws/src/projection_calibration)
+set(PROJECTION_DIR "C:/ws/src/projection_calibration")
 set(glfw3_DIR "C:/Program Files (x86)/GLFW/lib/cmake/glfw3/")
 set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include")
 set(IL_LIB_DIR "C:/Program Files (x86)/IL/lib/x64/Release/")
+set(glm_DIR "C:/Program Files (x86)/glm/cmake/glm/")
+
 
 
 ## Specify additional locations of header files
@@ -135,6 +137,7 @@ include_directories(
  # ${PROJECTION_DIR}/glfw-3.3.8/deps/glad
   ${glfw3_DIR}/../../../include
   ${IL_INCLUDE_DIR}
+  ${PROJECTION_DIR}/src/glm
  # "C:/Program Files (x86)/IL/include"
  # ${PROJECTION_DIR}/dll
 
@@ -142,6 +145,7 @@ include_directories(
 
 # find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
+#find_package(glm REQUIRED)
 find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS ${IL_LIB_DIR})
 find_library(ILU_LIBRARY NAMES ILU PATHS ${IL_LIB_DIR})
 find_library(ILUT_LIBRARY NAMES ILUT PATHS ${IL_LIB_DIR})
@@ -177,6 +181,9 @@ add_executable(${PROJECT_NAME}_node
 	nanosvg-master/src/nanosvgrast.h
 	src/glad.c
 	src/glad/glad.h
+	src/glm/glm.hpp
+	src/learnopengl/camera.h
+	src/learnopengl/shader_m.h
 	)
 
 ## Declare a C++ library
@@ -201,7 +208,7 @@ target_link_libraries(${PROJECT_NAME}_node
 	${catkin_LIBRARIES}
 	${Boost_LIBRARIES}
 	${IL_LIBRARY} ${ILU_LIBRARY} ${ILUT_LIBRARY}	
-	glfw GLAD
+	glfw GLAD # glm
 )
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

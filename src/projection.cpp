@@ -2,187 +2,160 @@
 #include <ros/package.h>
 
 #include "projection.h"
+//
+ //Define window size
+const int WIDTH = 3840;
+const int HEIGHT = 2160;
 
-using namespace std;
-float squarePositions[4][2] = {
-    {-0.1f, 0.1f},  // top-left square
-    {0.1f, 0.1f},   // top-right square
-    {0.0f, 0.0f},   // bottom-right square
-    {-0.1f, -0.1f}  // bottom-left square
+// Define octagon radius and height
+const float RADIUS = 0.5f;
+const float HEIGHT_WALL = 0.2f;
+
+// Define the number of octagons in a row and column
+const int ROWS = 7;
+const int COLUMNS = 7;
+
+// Define the vertices for an octagon
+const int NUM_VERTICES_OCTAGON = 8;
+GLfloat vertices_octagon[NUM_VERTICES_OCTAGON * 3];
+const float ANGLE_STEP = 360.0f / NUM_VERTICES_OCTAGON;
+// Define the vertices for the vertical walls of an octagon
+const int NUM_VERTICES_WALL = 4;
+GLfloat vertices_wall[NUM_VERTICES_WALL * 3] = {
+    -RADIUS, -RADIUS, 0.0f,
+    -RADIUS, -RADIUS, HEIGHT_WALL,
+    -RADIUS,  RADIUS, 0.0f,
+    -RADIUS,  RADIUS, HEIGHT_WALL
 };
-int selectedSquare = 0;
-int winWidth = 3840; 
-int winHeight = 2160;
-GLFWwindow* window;
-GLuint fbo;
-GLuint fboTexture;
-GLFWmonitor* monitor = NULL;
-int monitorNumber = 0;
-GLFWmonitor** monitors;
-int monitor_count;
+
+// Define the indices for an octagon
+const int NUM_INDICES_OCTAGON = 24;
+GLuint indices_octagon[NUM_INDICES_OCTAGON] = {
+    0, 1, 2,
+    0, 2, 3,
+    0, 3, 4,
+    0, 4, 5,
+    0, 5, 6,
+    0, 6, 7,
+    0, 7, 8,
+    0, 8, 1
+};
+
+// Define the shader program source code
+const char* vertexShaderSource = R"glsl(
+    #version 330 core
+
+    layout (location = 0) in vec3 aPos;
+
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+
+    void main()
+    {
+        gl_Position = projection * view * model * vec4(aPos, 1.0);
+    }
+)glsl";
+
+const char* fragmentShaderSource = R"glsl(
+    #version 330 core
+
+    out vec4 FragColor;
+
+    uniform vec3 color;
+
+    void main()
+    {
+        FragColor = vec4(color, 1.0f);
+    }
+)glsl";
 
 
-ILint texWidth, texHeight;
 
+// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
 
-// Callback function for handling window resize events
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.ProcessKeyboard(FORWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.ProcessKeyboard(BACKWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.ProcessKeyboard(LEFT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.ProcessKeyboard(RIGHT, deltaTime);
+}
+
+// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+// ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+    // make sure the viewport matches the new window dimensions; note that width and 
+    // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
 
-void checkGLError()
+
+// glfw: whenever the mouse moves, this callback is called
+// -------------------------------------------------------
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
-    GLenum err;
-    while ((err = glGetError()) != GL_NO_ERROR) {
-        ROS_ERROR("OpenGL error: %d", static_cast<int>(err));
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
     }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+    lastX = xpos;
+    lastY = ypos;
+
+    camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
-static void error_callback(int error, const char* description)
+// glfw: whenever the mouse scroll wheel scrolls, this callback is called
+// ----------------------------------------------------------------------
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    ROS_ERROR("Error: %s\n", description);
+    camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-void saveCoordinates() {
-    // returns the pixel position of the bottom left corner of rect
-	for (int i = 0; i < 4; i++) {
-		int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * winWidth);
-		int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * winHeight);
-		ROS_ERROR("Square %d position: (%d, %d)\n", i, pixelX, pixelY);
-	}
-//       int pixelWidth = (int)(0.1f * winWidth);
-//       int pixelHeight = (int)(0.1f * winHeight);
 
-	//ROS_ERROR("Pixel dimensions, width is: %d and height is %d", pixelWidth, pixelHeight);
-
-
-}
-
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-
-        if (key == GLFW_KEY_1 && action == GLFW_RELEASE) {
-            selectedSquare = 0;
-        }
-        if (key == GLFW_KEY_2 && action == GLFW_RELEASE) {
-            selectedSquare = 1;
-        }
-        if (key == GLFW_KEY_3 && action == GLFW_RELEASE) {
-            selectedSquare = 2;
-        }
-        if (key == GLFW_KEY_4 && action == GLFW_RELEASE) {
-            selectedSquare = 3;
-        }
-
-
-        // Listen for arrow key input to move selected square
-        if (key == GLFW_KEY_LEFT && action == GLFW_RELEASE) {
-            squarePositions[selectedSquare][0] -= 0.01f;
-        }
-
-        //@rony: fix the stuff below
-        if (key == GLFW_KEY_RIGHT && action == GLFW_RELEASE) {
-            squarePositions[selectedSquare][0] += 0.01f;
-        }
-        if (key == GLFW_KEY_UP && action == GLFW_RELEASE) {
-            squarePositions[selectedSquare][1] += 0.01f;
-        }
-        if (key == GLFW_KEY_DOWN && action == GLFW_RELEASE) {
-            squarePositions[selectedSquare][1] -= 0.01f;
-        }
-
-        if (key == GLFW_KEY_ENTER && action == GLFW_RELEASE) {
-            saveCoordinates();
-        }
-
-
-        if (key == GLFW_KEY_F && action == GLFW_RELEASE) {
-			monitors = glfwGetMonitors(&monitor_count);
-            //GLFWmonitor* monitor = glfwGetWindowMonitor(window);
-            //const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-
-            //// Create a window
-            ////GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "My Window", monitor, NULL);
-
-            //// Make the window fullscreen
-            ////int count;
-            ////GLFWmonitor** monitors = glfwGetMonitors(&count);
-            //glfwSetWindowMonitor(window, NULL, 0, 0, mode->width, mode->height, mode->refreshRate);
-
-
-
-            // find the second monitor (index 1) by checking its position
-            for (int i = 0; i < monitor_count; i++) {
-                const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]);
-                int monitor_x, monitor_y;
-                glfwGetMonitorPos(monitors[i], &monitor_x, &monitor_y);
-                if (monitor_x != 0 || monitor_y != 0) {
-                    monitorNumber = i;
-                    monitor = monitors[i];
-                    break;
-                }
+int main(int argc, char** argv)
+{
+    const float offset_angle = 22.5f;
+    for (int i = 0; i < NUM_VERTICES_OCTAGON; ++i) {
+        float angle = ANGLE_STEP * i;
+        vertices_octagon[i * 3] = RADIUS * std::cos(angle * M_PI / 180.0f);
+        vertices_octagon[i * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f);
+        vertices_octagon[i * 3 + 2] = 0.0f;
+    }
+    //
+    for (int i = 0; i < ROWS; ++i) {
+        for (int j = 0; j < COLUMNS; ++j) {
+            int index = (i * COLUMNS + j) * NUM_VERTICES_OCTAGON * 3;
+            for (int k = 0; k < NUM_VERTICES_OCTAGON; ++k) {
+                float angle = ANGLE_STEP * k;
+                vertices_octagon[index + k * 3] = RADIUS * std::cos(angle * M_PI / 180.0) * std::cos((k * 45.0 + offset_angle) * M_PI / 180.0);
+                vertices_octagon[index + k * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f);
+                vertices_octagon[index + k * 3 + 2] = HEIGHT_WALL * (i + j);
             }
-
-            // make the window full screen on the second monitor
-            if (monitor) {
-                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-            }
-
         }
-
-        if (key == GLFW_KEY_M && action == GLFW_RELEASE) {
-			monitors = glfwGetMonitors(&monitor_count);
-            monitorNumber++;
-            monitor = monitors[monitorNumber % monitor_count];
-            if (monitor) {
-                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-            }
-
-        }
-
-
-
-
-}
-
-void drawRect(float x, float y, float width, float height) {
-    glBegin(GL_QUADS);
-
-    //glTexCoord2f(x, y);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex2f(x, y);
-
-    //glTexCoord2f(x+texWidth, y);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex2f(x+width, y);
-
-    //glTexCoord2f(x+texWidth, y+texHeight);
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex2f(x+width, y+height);
-
-    //glTexCoord2f(x, y+texHeight);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex2f(x, y+height);
-    glEnd();
-}
-
-int main(int argc, char** argv) {
+    }
 
     ros::init(argc, argv, "Projection", ros::init_options::AnonymousName);
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
-	ROS_ERROR("main ran");
-
-    //ILuint image;
-    //ilInit();
-    //iluInit();
-    //ilutInit();
-
-    //ilInit();
-
-    //ilutRenderer(ILUT_OPENGL);
+    ROS_ERROR("main ran");
 
     ILuint ImgId = 0;
     ilGenImages(1, &ImgId);
@@ -203,116 +176,390 @@ int main(int argc, char** argv) {
 
     ROS_ERROR("Converting image: %s", iluErrorString(ilGetError()));
 
-    texWidth = ilGetInteger(IL_IMAGE_WIDTH);
-    texHeight = ilGetInteger(IL_IMAGE_HEIGHT);
 
-    ROS_ERROR("%d", texWidth);
-    ROS_ERROR("%d", texHeight);
 
-    //ILubyte* imageData = ilGetData();
-
-    glfwSetErrorCallback(error_callback);
-
+    // Initialize GLFW
     if (!glfwInit()) {
-        ROS_ERROR("glfw init issue");
+        std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
     }
-    // Create a window with a 4K resolution (3840x2160)
-    window = glfwCreateWindow(winWidth,winHeight, "GLFW 4K Window", NULL, NULL);
-    if (!window)
-    {
-        glfwTerminate();
-        return -1;
-    }
+
+    // Create a windowed mode window and its OpenGL context
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "GLFW 4K Window", NULL, NULL);
 
     // Set the window as the current OpenGL context
     glfwMakeContextCurrent(window);
-	ROS_ERROR("window ran");
+    ROS_ERROR("window ran");
 
     gladLoadGL();
     glfwSwapInterval(1);
-    glfwSetKeyCallback(window, keyCallback);
-    GLuint textureID;
-    // Set the window resize callback
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    //glfwSetKeyCallback(window, keyCallback);
+    // Make the window's context current
 
+    glEnable(GL_DEPTH_TEST);
+    Shader ourShader(vertexShaderSource, fragmentShaderSource);
+    glfwMakeContextCurrent(window);
+    
 
-    //glMatrixMode(GL_MODELVIEW);
-    //glLoadIdentity();
-    //glTranslatef(0, 0, 0);
-
-
-    // Create an FBO and attach the texture to it
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    glGenTextures(1, &fboTexture);
-    glBindTexture(GL_TEXTURE_2D, fboTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, winWidth, winHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboTexture, 0);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glGenerateMipmap(GL_TEXTURE_2D);
 
 
 
 
+    // Set up the vertex buffer objects (VBOs) and element buffer objects (EBOs)
+    GLuint VBO_octagon, VBO_wall, VAO_octagon, VAO_wall, EBO_octagon;
 
-    while (!glfwWindowShouldClose(window))
-    {
+    glGenBuffers(1, &VBO_octagon);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_octagon);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices_octagon), vertices_octagon, GL_STATIC_DRAW);
 
-        //glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        ////glViewport(0, 0, winWidth, winHeight);
-
-        //// Clear the FBO
-        //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        //glClear(GL_COLOR_BUFFER_BIT);
-
-
-
-  //      // Draw squares with updated positions
-        glClear(GL_COLOR_BUFFER_BIT);
-		//glGenTextures(1, &textureID);
-		//glBindTexture(GL_TEXTURE_2D, textureID);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-		//// Load image data into texture
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH),
-            ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGB,
-            GL_UNSIGNED_BYTE, ilGetData());
-
-		// Enable texture mapping
-		glEnable(GL_TEXTURE_2D);
+    glGenBuffers(1, &VBO_wall);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_wall);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices_wall), vertices_wall, GL_STATIC_DRAW);
 
 
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
 
-			
+    glGenVertexArrays(1, &VAO_octagon);
+    glBindVertexArray(VAO_octagon);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_octagon);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
 
-        for (int i = 0; i < 4; i++) {
-            glBindTexture(GL_TEXTURE_2D, fboTexture);
-            drawRect(squarePositions[i][0], squarePositions[i][1], 0.1f, 0.1f);
-        }
+    glGenVertexArrays(1, &VAO_wall);
+    glBindVertexArray(VAO_wall);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_wall);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
 
-        // Swap the buffers
+    glGenBuffers(1, &EBO_octagon);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_octagon);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices_octagon), indices_octagon, GL_STATIC_DRAW);
+
+    //// Set up the shader program
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    //// Set up the model, view, and projection matrices
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+
+    ////// Set the uniform variables for the shader program
+    glUseProgram(shaderProgram);
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+    //// Define the color for the walls of the octagons
+    GLfloat wallColor[] = { 1, 0, 0 };
+
+    // Activate the shader program
+    shader.use();
+    shader.setMat4("view", view);
+    shader.setMat4("projection", projection);
+
+    ////// Set up the rendering loop
+    while (!glfwWindowShouldClose(window)) {
+        
+        processInput(window);
+        //    // Clear the screen to a light gray color
+        glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        //    // Set the uniform variables for the shader program
+        glUseProgram(shaderProgram);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+        //    // Draw the octagons
+        glBindVertexArray(VAO_octagon);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_octagon);
+        glDrawElements(GL_TRIANGLES, sizeof(indices_octagon), GL_UNSIGNED_INT, 0);
+
+
+        //bind wall image texture, not sure if it's placed correctly here
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        ourShader.use();
+        ourShader.setInt("texture1", 0); // Set the texture uniform to 0 (GL_TEXTURE0)
+
+
+
+        //    // Draw the walls of the octagons
+        glBindVertexArray(VAO_wall);
+        glUseProgram(shaderProgram);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, wallColor);
+        glDrawArrays(GL_LINES, 0, sizeof(vertices_wall) / sizeof(vertices_wall[0]));
+
+        //    // Swap the front and back buffers
         glfwSwapBuffers(window);
+
+        //    // Poll for and process events
         glfwPollEvents();
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-        // Exit the loop when the window is closed or escape key is pressed
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwWindowShouldClose(window))
-            break;
     }
 
-    glfwDestroyWindow(window);
-    ilDeleteImages(1, &ImgId);
-    // Terminate GLFW
-    glfwTerminate();
+    ////// Clean up
+    glDeleteBuffers(1, &VBO_octagon);
+    glDeleteBuffers(1, &VBO_wall);
+    glDeleteVertexArrays(1, &VAO_octagon);
+    glDeleteVertexArrays(1, &VAO_wall);
+    glDeleteBuffers(1, &EBO_octagon);
+    glDeleteProgram(shaderProgram);
 
-    return 0;
+    ////// Terminate GLFW
+    glfwTerminate();
+    return 0; 
 }
 
+// Define the model, view, and projection matrices //glm::mat4 model = glm::mat4(1.0f); //glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)); //glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f); // //// Set the shader program uniforms //GLint modelLoc = glGetUniformLocation(shaderProgram, "model"); //GLint viewLoc = glGetUniformLocation(shaderProgram, "view"); //GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection"); //GLint colorLoc = glGetUniformLocation(shaderProgram, "color");
+//
+//glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+//glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+//glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+//
+//// Set the color uniform for the walls
+//glUniform3f(colorLoc, 0.5f, 0.5f, 0.5f);
+//
+//// Render the vertical walls
+//glBindVertexArray(VAO_wall);
+//glDrawArrays(GL_TRIANGLE_STRIP, 0, NUM_VERTICES_WALL);
+//
+//// Set the color uniform for the octagons
+//glUniform3f(colorLoc, 1.0f, 0.5f, 0.0f);
+//
+//// Render the octagons
+//glBindVertexArray(VAO_octagon);
+//glDrawElementsInstanced(GL_TRIANGLES, NUM_INDICES_OCTAGON, GL_UNSIGNED_INT, 0, ROWS* COLUMNS);
+
+// Clean up the buffers and exit
+//glDeleteVertexArrays(1, &VAO_octagon);
+//glDeleteBuffers(1, &VBO_octagon);
+//glDeleteBuffers(1, &EBO_octagon);
+//
+//glDeleteVertexArrays(1, &VAO_wall);
+//glDeleteBuffers(1, &VBO_wall);
+//
+//glfwTerminate();
+//return 0;
+//}
+
+
+//GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+//glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+//glCompileShader(vertexShader);
+//int success;
+//char infoLog[512];
+//glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+//if (!success) {
+//    glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+//    std::cerr << "Error compiling vertex shader:\n" << infoLog << std::endl;
+//}
+//
+//GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+//glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+//glCompileShader(fragmentShader);
+//
+//glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+//if (!success) {
+//    glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+//    std::cerr << "Error compiling fragment shader:\n" << infoLog << std::endl;
+//}
+//
+//GLuint shaderProgram = glCreateProgram();
+//glAttachShader(shaderProgram, vertexShader);
+//glAttachShader(shaderProgram, fragmentShader);
+//glLinkProgram(shaderProgram);
+//
+//glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+//if (!success) {
+//    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+//    std::cerr << "Error linking shader program:\n" << infoLog << std::endl;
+//}
+//
+//glDeleteShader(vertexShader);
+//glDeleteShader(fragmentShader);
+//
+//// Set up the camera projection matrix
+//float aspect_ratio = (float)WIDTH / HEIGHT;
+//glm::mat4 projection_matrix = glm::perspective(glm::radians(45.0f), aspect_ratio, 0.1f, 100.0f);
+//
+//// Set up the camera view matrix
+//glm::mat4 view_matrix = glm::lookAt(
+//    glm::vec3(0.0f, 0.0f, 3.0f),
+//    glm::vec3(0.0f, 0.0f, 0.0f),
+//    glm::vec3(0.0f, 1.0f, 0.0f)
+//);
+//
+//// Set up the render loop
+//while (!glfwWindowShouldClose(window)) {
+//    // Process inputs
+//    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+//        glfwSetWindowShouldClose(window, true);
+//    }
+//
+//    // Set the background color
+//    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+//    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//
+//    // Activate the shader program
+//    glUseProgram(shaderProgram);
+//
+//    // Draw the octagons
+//    glBindVertexArray(VAO_octagon);
+//    glm::mat4 model_matrix_octagon = glm::mat4(1.0f);
+//
+//    for (int i = 0; i < ROWS; ++i) {
+//        for (int j = 0; j < COLUMNS; ++j) {
+//            // Calculate the position of the octagon
+//            float x = (2.0f * j - (COLUMNS - 1)) * 1.2f;
+//            float y = (2.0f * i - (ROWS - 1)) * 1.2f;
+//            glm::vec3 position(x, y, 0.0f);
+//
+//            // Calculate the model matrix for the octagon
+//            model_matrix_octagon = glm::translate(glm::mat4(1.0f), position);
+//
+//            // Set the model, view, and projection matrices as uniforms in the shader program
+//            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model_matrix"), 1, GL_FALSE, glm::value_ptr(model_matrix_octagon));
+//            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view_matrix"), 1, GL_FALSE, glm::value_ptr(view_matrix));
+//            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection_matrix"), 1, GL_FALSE, glm::value_ptr(projection_matrix));
+//            glDrawArrays(GL_TRIANGLE_FAN, 0, 8);
+//        }
+//    }
+//
+//    // Swap the front and back buffers
+//    glfwSwapBuffers(window);
+//
+//    // Poll for and process events
+//    glfwPollEvents();
+//    // Clean up
+//    glDeleteVertexArrays(1, &VAO_octagon);
+//    glDeleteBuffers(1, &VBO_octagon);
+//    glDeleteProgram(shaderProgram);
+//
+//    // Terminate GLFW
+//    glfwTerminate();
+//    return 0;
+//}
+
+//const int WIDTH = 800;
+//const int HEIGHT = 600;
+//
+//void drawOctagon(float x, float y, float z, float size, float height)
+//{
+//    glBegin(GL_QUADS);
+//    // draw the bottom face
+//    for (int i = 0; i < 8; i++)
+//    {
+//        float angle = i * 2 * M_PI / 8;
+//        glVertex3f(x + size * cos(angle), y + size * sin(angle), z);
+//    }
+//    // draw the walls
+//    for (int i = 0; i < 8; i++)
+//    {
+//        float angle1 = i * 2 * M_PI / 8;
+//        float angle2 = (i + 1) * 2 * M_PI / 8;
+//        glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z);
+//        glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z);
+//        glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z + height);
+//        glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z + height);
+//    }
+//    // draw the top face
+//    for (int i = 0; i < 8; i++)
+//    {
+//        float angle = i * 2 * M_PI / 8;
+//        glVertex3f(x + size * cos(angle), y + size * sin(angle), z + height);
+//    }
+//    glEnd();
+//}
+//
+//void drawFlatSurface(int rows, int cols, float size, float height)
+//{
+//    float xOffset = -(cols - 1) * size / 2;
+//    float yOffset = -(rows - 1) * size / 2;
+//    for (int i = 0; i < rows; i++)
+//    {
+//        for (int j = 0; j < cols; j++)
+//        {
+//            float x = j * size + xOffset;
+//            float y = i * size + yOffset;
+//            drawOctagon(x, y, 0, size, height);
+//        }
+//    }
+//}
+//
+//int main(int argc, char** argv)
+//{
+//        ros::init(argc, argv, "Projection", ros::init_options::AnonymousName);
+//    ros::NodeHandle n;
+//    ros::NodeHandle nh("~");
+//    ROS_ERROR("main ran");
+//
+//
+//    GLFWwindow* window;
+//
+//    if (!glfwInit())
+//        return -1;
+//
+//    window = glfwCreateWindow(WIDTH, HEIGHT, "OpenGL Without GLEW", NULL, NULL);
+//    if (!window)
+//    {
+//        glfwTerminate();
+//        return -1;
+//    }
+//    gladLoadGL();
+//
+//    glfwMakeContextCurrent(window);
+//
+//    glMatrixMode(GL_PROJECTION);
+//    glLoadIdentity();
+//    glOrtho(-WIDTH / 2, WIDTH / 2, -HEIGHT / 2, HEIGHT / 2, -1000, 1000);
+//
+//    glMatrixMode(GL_MODELVIEW);
+//    glLoadIdentity();
+//    glTranslatef(0, 0, -500);
+//
+//    glEnable(GL_DEPTH_TEST);
+//
+//    while (!glfwWindowShouldClose(window))
+//    {
+//        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//
+//        drawFlatSurface(7, 7, 50, 20);
+//
+//        glfwSwapBuffers(window);
+//        glfwPollEvents();
+//    }
+//
+//    glfwTerminate();
+//    return 0;
+//}
+//
