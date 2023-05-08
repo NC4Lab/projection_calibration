@@ -7,6 +7,17 @@
 const int WIDTH = 3840;
 const int HEIGHT = 2160;
 
+
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = WIDTH / 2.0f;
+float lastY = HEIGHT / 2.0f;
+bool firstMouse = true;
+
+// timing
+float deltaTime = 0.0f;	// time between current frame and last frame
+float lastFrame = 0.0f;
+
+
 // Define octagon radius and height
 const float RADIUS = 0.5f;
 const float HEIGHT_WALL = 0.2f;
@@ -139,18 +150,34 @@ int main(int argc, char** argv)
         vertices_octagon[i * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f);
         vertices_octagon[i * 3 + 2] = 0.0f;
     }
-    //
+    //weird formation.
+    //for (int i = 0; i < ROWS; ++i) {
+    //    for (int j = 0; j < COLUMNS; ++j) {
+    //        int index = (i * COLUMNS + j) * NUM_VERTICES_OCTAGON * 3;
+    //        for (int k = 0; k < NUM_VERTICES_OCTAGON; ++k) {
+    //            float angle = ANGLE_STEP * k;
+    //            vertices_octagon[index + k * 3] = RADIUS * std::cos(angle * M_PI / 180.0) * std::cos((k * 45.0 + offset_angle) * M_PI / 180.0);
+    //            vertices_octagon[index + k * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f);
+    //            vertices_octagon[index + k * 3 + 2] = HEIGHT_WALL * (i + j);
+    //        }
+    //    }
+    //}
+
+    //attempt for 7x7 formation, 2.5 is the offset between octagons
     for (int i = 0; i < ROWS; ++i) {
         for (int j = 0; j < COLUMNS; ++j) {
-            int index = (i * COLUMNS + j) * NUM_VERTICES_OCTAGON * 3;
+            int index = ((i * COLUMNS) + j) * NUM_VERTICES_OCTAGON * 3;
+            float x_offset = 0;//(j - 3.0f) * 2.5f * RADIUS;
+            float y_offset = 0;// (i - 3.0f) * 2.5f * RADIUS;
             for (int k = 0; k < NUM_VERTICES_OCTAGON; ++k) {
                 float angle = ANGLE_STEP * k;
-                vertices_octagon[index + k * 3] = RADIUS * std::cos(angle * M_PI / 180.0) * std::cos((k * 45.0 + offset_angle) * M_PI / 180.0);
-                vertices_octagon[index + k * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f);
-                vertices_octagon[index + k * 3 + 2] = HEIGHT_WALL * (i + j);
+                vertices_octagon[index + k * 3] = RADIUS * std::cos(angle * M_PI / 180.0) + x_offset;
+                vertices_octagon[index + k * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f) + y_offset;
+                vertices_octagon[index + k * 3 + 2] = HEIGHT_WALL;
             }
         }
     }
+
 
     ros::init(argc, argv, "Projection", ros::init_options::AnonymousName);
     ros::NodeHandle n;
@@ -248,55 +275,77 @@ int main(int argc, char** argv)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices_octagon), indices_octagon, GL_STATIC_DRAW);
 
     //// Set up the shader program
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
+    //GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    //glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    //glCompileShader(vertexShader);
 
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
+    //GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    //glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    //glCompileShader(fragmentShader);
 
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    //GLuint shaderProgram = glCreateProgram();
+    //glAttachShader(shaderProgram, vertexShader);
+    //glAttachShader(shaderProgram, fragmentShader);
+    //glLinkProgram(shaderProgram);
 
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    //glDeleteShader(vertexShader);
+    //glDeleteShader(fragmentShader);
 
-    //// Set up the model, view, and projection matrices
-    glm::mat4 model = glm::mat4(1.0f);
-    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+    ////// Set up the model, view, and projection matrices  - do we need these (till line 287?)
+    //glm::mat4 model = glm::mat4(1.0f);
+    //glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
 
-    ////// Set the uniform variables for the shader program
-    glUseProgram(shaderProgram);
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+    //////// Set the uniform variables for the shader program
+    //glUseProgram(shaderProgram);
+    //glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+    //glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+    //glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
     //// Define the color for the walls of the octagons
     GLfloat wallColor[] = { 1, 0, 0 };
 
     // Activate the shader program
-    shader.use();
-    shader.setMat4("view", view);
-    shader.setMat4("projection", projection);
+    ourShader.use();
+    //ourShader.setMat4("view", view);
+    //ourShader.setMat4("projection", projection);
 
     ////// Set up the rendering loop
     while (!glfwWindowShouldClose(window)) {
+
+        //for keyboard delta-time
+        float currentFrame = static_cast<float>(glfwGetTime());
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
         
         processInput(window);
         //    // Clear the screen to a light gray color
         glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+        //@AD: work on integrating those million different shading related things.
+
+
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+        ourShader.setMat4("projection", projection);
+
+        // camera/view transformation
+        glm::mat4 view = camera.GetViewMatrix();
+        ourShader.setMat4("view", view);
+
+		glm:mat4 model = glm::mat4(1.0f); 
+        ourShader.setMat4("model", model);
+
+        //ourShader.setFloat("colour", wallColor);
+
+
         //    // Set the uniform variables for the shader program
-        glUseProgram(shaderProgram);
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        //glUseProgram(shaderProgram);
+ /*       glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
+*/
         //    // Draw the octagons
         glBindVertexArray(VAO_octagon);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_octagon);
@@ -306,18 +355,19 @@ int main(int argc, char** argv)
         //bind wall image texture, not sure if it's placed correctly here
         glBindTexture(GL_TEXTURE_2D, texture);
 
+        // Draw the walls of the octagons
+        glBindVertexArray(VAO_wall);
+        //glUseProgram(shaderProgram);
+        /*glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));*/
+        //glUniform3fv(glGetUniformLocation(ourShader, "color"), 1, wallColor);
+
         ourShader.use();
         ourShader.setInt("texture1", 0); // Set the texture uniform to 0 (GL_TEXTURE0)
 
 
 
-        //    // Draw the walls of the octagons
-        glBindVertexArray(VAO_wall);
-        glUseProgram(shaderProgram);
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniform3fv(glGetUniformLocation(shaderProgram, "color"), 1, wallColor);
         glDrawArrays(GL_LINES, 0, sizeof(vertices_wall) / sizeof(vertices_wall[0]));
 
         //    // Swap the front and back buffers
@@ -333,7 +383,7 @@ int main(int argc, char** argv)
     glDeleteVertexArrays(1, &VAO_octagon);
     glDeleteVertexArrays(1, &VAO_wall);
     glDeleteBuffers(1, &EBO_octagon);
-    glDeleteProgram(shaderProgram);
+    //glDeleteProgram(shaderProgram);
 
     ////// Terminate GLFW
     glfwTerminate();
