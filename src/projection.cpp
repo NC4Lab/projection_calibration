@@ -32,17 +32,21 @@ float lastFrame = 0.0f;
 
 // Define octagon radius and height
 const float RADIUS = 0.5f;
-const float HEIGHT_WALL = 0.2f;
+
+//z component of the wall
+int Z = 0;
 
 // Define the number of octagons in a row and column
-const int ROWS = 1;
-const int COLUMNS = 1;
+const int ROWS = 7;
+const int COLUMNS = 7;
 const int NUMBER_OCT_VERTICES = 8;
 const int NUMBER_WALL_VERTICES = 4;
-const int WALLS = 1;
+const int NUMBER_WALLS = 8;
+const float WALL_HEIGHT = 0.2f;
+const float OCTAGON_SIZE = 0.5f;
 
 //last one is x,y,z
-GLfloat wall_vertices[ROWS][COLUMNS][WALLS][NUMBER_WALL_VERTICES][3];
+GLfloat wall_vertices[ROWS][COLUMNS][NUMBER_WALLS][NUMBER_WALL_VERTICES][3];
 GLfloat octagon_vertices[ROWS][COLUMNS][NUMBER_OCT_VERTICES][3];
 
 
@@ -50,12 +54,7 @@ GLfloat octagon_vertices[ROWS][COLUMNS][NUMBER_OCT_VERTICES][3];
 const float ANGLE_STEP = 360.0f / NUMBER_OCT_VERTICES;
 // Define the vertices for the vertical walls of an octagon
 const int NUM_VERTICES_WALL = 4;
-GLfloat vertices_wall[NUM_VERTICES_WALL * 3] = {
-    -RADIUS, -RADIUS, 0.0f,
-    -RADIUS, -RADIUS, HEIGHT_WALL,
-    -RADIUS,  RADIUS, 0.0f,
-    -RADIUS,  RADIUS, HEIGHT_WALL
-};
+
 
 
 
@@ -182,29 +181,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 
-// glfw: whenever the mouse moves, this callback is called
-//@rony:bind this to keyboard
-// -------------------------------------------------------
-//void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
-//{
-//    float xpos = static_cast<float>(xposIn);
-//    float ypos = static_cast<float>(yposIn);
-//
-//    if (firstMouse)
-//    {
-//        lastX = xpos;
-//        lastY = ypos;
-//        firstMouse = false;
-//    }
-//
-//    float xoffset = xpos - lastX;
-//    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-//
-//    lastX = xpos;
-//    lastY = ypos;
-//
-//    camera.ProcessMouseMovement(xoffset, yoffset);
-//}
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
@@ -301,78 +277,127 @@ void drawWall(int i,int j,int k) {
 
     glBegin(GL_QUADS);
 
+    //right now the number of vertices for each wall is hard coded (4 atm)
+
     //glTexCoord2f(x, y);
-    glTexCoord2f(0.0f, 0.0f);
+    //glTexCoord2f(0.0f, 0.0f);
     glVertex3fv(wall_vertices[i][j][k][0]);
 
     //glTexCoord2f(x+texWidth, y);
-    glTexCoord2f(1.0f, 0.0f);
+    //glTexCoord2f(1.0f, 0.0f);
     glVertex3fv(wall_vertices[i][j][k][1]);
 
     //glTexCoord2f(x+texWidth, y+texHeight);
-    glTexCoord2f(1.0f, 1.0f);
+    //glTexCoord2f(1.0f, 1.0f);
     glVertex3fv(wall_vertices[i][j][k][2]);
 
     //glTexCoord2f(x, y+texHeight);
-    glTexCoord2f(0.0f, 1.0f);
+    //glTexCoord2f(0.0f, 1.0f);
     glVertex3fv(wall_vertices[i][j][k][3]);
     glEnd();
 
 }
 
-void drawOctagon(float x, float y, float z, float size, float height)
+void drawOctagon(int i, int j)
 {
-    glBegin(GL_QUADS);
-    // draw the bottom face
-    //for (int i = 0; i < 8; i++)
-    //{
-    //    float angle = i * 2 * M_PI / 8;
-    //    glVertex3f(x + size * cos(angle), y + size * sin(angle), z);
-    //}
-    // draw the walls
-    for (int i = 0; i < 8; i++)
+    // for some reason Abhishek thought calling million different functions for the same thing would 
+    // a brilliant idea
+
+    for (int k = 0; k < NUMBER_WALLS; k++)
     {
-        float angle1 = (i + 0.5) * 2 * M_PI / 8;
-        float angle2 = (i + 1.5) * 2 * M_PI / 8;
-        glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z);
-        glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z);
-        glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z + height);
-        glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z + height);
+			drawWall(i, j, k);
+
     }
-    // draw the top face
+
+    //glBegin(GL_QUADS);
+    //// draw the bottom face
+    ////for (int i = 0; i < 8; i++)
+    ////{
+    ////    float angle = i * 2 * M_PI / 8;
+    ////    glVertex3f(x + size * cos(angle), y + size * sin(angle), z);
+    ////}
+    //// draw the walls
     //for (int i = 0; i < 8; i++)
     //{
-    //    float angle = i * 2 * M_PI / 8;
-    //    glVertex3f(x + size * cos(angle), y + size * sin(angle), z + height);
+    //    float angle1 = (i + 0.5) * 2 * M_PI / 8;
+    //    float angle2 = (i + 1.5) * 2 * M_PI / 8;
+    //    glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z);
+    //    glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z);
+    //    glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z + height);
+    //    glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z + height);
     //}
-    glEnd();
+    //// draw the top face
+    ////for (int i = 0; i < 8; i++)
+    ////{
+    ////    float angle = i * 2 * M_PI / 8;
+    ////    glVertex3f(x + size * cos(angle), y + size * sin(angle), z + height);
+    ////}
+    //glEnd();
+}
+
+void drawMaze() {
+    for (int i = 0; i < ROWS; i++)
+    {
+
+        for (int j = 0; j < COLUMNS; j++)
+        {
+            drawOctagon(i, j);
+        }
+    }
 }
 
 int main(int argc, char** argv)
 {
     const float offset_angle = 22.5f;
     // for future stuff
-   // for (int i = 0; i < ROWS; i++) {
+   for (int i = 0; i < ROWS; i++) {
 
-   //     for (int j = 0; j < COLUMNS; j++) {
+       for (int j = 0; j < COLUMNS; j++) {
 
-			//for (int k = 0; k < WALLS; k++) {
+			for (int k = 0; k < NUMBER_WALLS; k++) {
 
-			//	for (int l = 0; l < NUMBER_WALL_VERTICES; l++) {
-   //                    
-   //                  for (int m = 0; m < 3) {
+				//for (int l = 0; l < NUMBER_WALL_VERTICES; l++) {
+                       
+     //                for (int m = 0; m < 3) {
 
-   //                     /* wall_vertices[i][j][k][l][m]*/
-			//			vertices_octagon[index + k * 3] = RADIUS * std::cos(angle * M_PI / 180.0) + x_offset;
-			//			vertices_octagon[index + k * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f) + y_offset;
-			//			vertices_octagon[index + k * 3 + 2] = HEIGHT_WALL;
+     //                   /* wall_vertices[i][j][k][l][m]*/
+					//	vertices_octagon[index + k * 3] = RADIUS * std::cos(angle * M_PI / 180.0) + x_offset;
+					//vertices_octagon[index + k * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f) + y_offset;
+					//	vertices_octagon[index + k * 3 + 2] = HEIGHT_WALL;
+					//	{
 
-   //                  }
-			//	}
-			//}
-   //     }
-   // }
+                            // calculating all the vertices on the wall
+							float angle1 = (k + 0.5) * 2 * M_PI / 8;
+							float angle2 = (k + 1.5) * 2 * M_PI / 8;
+                            
+                            //z and a few other variables should be initialized at the very top
 
+                            wall_vertices[i][j][k][0][0] = (float) i + OCTAGON_SIZE * cos(angle1);
+                            wall_vertices[i][j][k][0][1] = (float) j + OCTAGON_SIZE * sin(angle1);
+                            wall_vertices[i][j][k][0][2] = (float) Z;
+
+                            wall_vertices[i][j][k][1][0] =(float) i + OCTAGON_SIZE * cos(angle2);
+                            wall_vertices[i][j][k][1][1] =(float) j + OCTAGON_SIZE * sin(angle2);
+                            wall_vertices[i][j][k][1][2] =(float) Z;
+
+                            wall_vertices[i][j][k][2][0] =(float) i + OCTAGON_SIZE * cos(angle2);
+                            wall_vertices[i][j][k][2][1] =(float) j + OCTAGON_SIZE * sin(angle2);
+                            wall_vertices[i][j][k][2][2] =(float) Z + (float) WALL_HEIGHT;
+
+                            wall_vertices[i][j][k][3][0] =(float) i + OCTAGON_SIZE * cos(angle1);
+                            wall_vertices[i][j][k][3][1] =(float) j + OCTAGON_SIZE * sin(angle1);
+                            wall_vertices[i][j][k][3][2] =(float) Z + (float) WALL_HEIGHT;
+
+
+							//glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z);
+							//glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z + height);
+							//glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z + height);
+						//}
+
+
+                     }
+				}
+			}
 
  //   wall_vertices[0][0][0][0][0] = 0.0f;
  //   wall_vertices[0][0][0][0][1] = 0.0f;
@@ -390,24 +415,6 @@ int main(int argc, char** argv)
  //   wall_vertices[0][0][0][3][0] = 0.0f;
 	//wall_vertices[0][0][0][3][1] = 0.1f;
 	//wall_vertices[0][0][0][3][2] = 0.0f;
-
-
-
-    ////attempt for 7x7 formation, 2.5 is the offset between octagons
-    //for (int i = 0; i < ROWS; ++i) {
-    //    for (int j = 0; j < COLUMNS; ++j) {
-    //        int index = ((i * COLUMNS) + j) * NUM_VERTICES_OCTAGON * 3;
-    //        float x_offset = (j - 0.3f) * 0.25f * RADIUS;
-    //        float y_offset = (i - 0.3f) * 0.25f * RADIUS;
-    //        for (int k = 0; k < NUM_VERTICES_OCTAGON; ++k) {
-    //            float angle = ANGLE_STEP * k;
-    //            vertices_octagon[index + k * 3] = RADIUS * std::cos(angle * M_PI / 180.0) + x_offset;
-    //            vertices_octagon[index + k * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f) + y_offset;
-    //            vertices_octagon[index + k * 3 + 2] = HEIGHT_WALL;
-    //        }
-    //    }
-    //}
-
 
     ros::init(argc, argv, "Projection", ros::init_options::AnonymousName);
     ros::NodeHandle n;
@@ -461,6 +468,7 @@ int main(int argc, char** argv)
     Shader ourShader(vertexShaderSource, fragmentShaderSource);
     glfwMakeContextCurrent(window);
     
+
 
     unsigned int texture;
     glGenTextures(1, &texture);
@@ -538,8 +546,7 @@ int main(int argc, char** argv)
 
     // Activate the shader program
     ourShader.use();
-    //ourShader.setMat4("view", view);
-    //ourShader.setMat4("projection", projection);
+    ourShader.setVec3("colour", 1,0,0);
 
     ////// Set up the rendering loop
     while (!glfwWindowShouldClose(window)) {
@@ -610,13 +617,15 @@ int main(int argc, char** argv)
 
         //glDrawArrays(GL_TRIANGLES, 0, 3);
         //drawWall(0, 0, 0);
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++)
-            {
-               
-			drawOctagon((float) i, (float) j, 1, 0.5, 0.5);
-            }
-        }
+   //     for (int i = 0; i < 8; i++) {
+   //         for (int j = 0; j < 8; j++)
+   //         {
+   //            
+			//drawOctagon((float) i, (float) j, 1, 0.5, 0.5);
+   //         }
+   //     }
+
+        drawMaze();
 
         //    // Swap the front and back buffers
         glfwSwapBuffers(window);
