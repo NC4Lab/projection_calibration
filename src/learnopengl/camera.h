@@ -37,10 +37,13 @@ public:
     // euler Angles
     float Yaw;
     float Pitch;
+    float Roll;
     // camera options
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
+
+    float translationOffset;
 
     // constructor with vectors
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
@@ -48,7 +51,9 @@ public:
         Position = position;
         WorldUp = up;
         Yaw = yaw;
+        translationOffset = 0.0f;
         Pitch = pitch;
+        Roll = 0.0f;
         updateCameraVectors();
     }
     // constructor with scalar values
@@ -57,7 +62,9 @@ public:
         Position = glm::vec3(posX, posY, posZ);
         WorldUp = glm::vec3(upX, upY, upZ);
         Yaw = yaw;
+        translationOffset = 0.0f;
         Pitch = pitch;
+        Roll = 0.0f;
         updateCameraVectors();
     }
 
@@ -103,6 +110,8 @@ public:
         updateCameraVectors();
     }
 
+    
+
     // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
     void ProcessMouseScroll(float yoffset)
     {
@@ -111,6 +120,17 @@ public:
             Zoom = 1.0f;
         if (Zoom > 45.0f)
             Zoom = 45.0f;
+    }
+
+    void ProcessRoll(float offset) {
+        Roll += offset;
+        updateCameraVectors();
+    }
+
+    void ProcessUp(float offset){
+        translationOffset += offset;
+        updateCameraVectors(); 
+
     }
 
 private:
@@ -124,8 +144,12 @@ private:
         front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
         Front = glm::normalize(front);
         // also re-calculate the Right and Up vector
-        Right = glm::normalize(glm::cross(Front, WorldUp));  // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-        Up = glm::normalize(glm::cross(Right, Front));
+        glm::vec3 Right_temp = glm::normalize(glm::cross(Front, WorldUp));  // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
+
+        Right[0] = cos(glm::radians(Roll)) * Right_temp[0] - sin(glm::radians(Roll)) * Right_temp[1];
+        Right[1] = sin(glm::radians(Roll)) * Right_temp[0] + cos(glm::radians(Roll)) * Right_temp[1];
+
+        Up = glm::normalize(glm::cross(Right, Front)) + translationOffset;
     }
 };
 #endif

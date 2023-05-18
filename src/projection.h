@@ -49,6 +49,8 @@ using namespace boost::placeholders;
 #include "learnopengl/camera.h" 
 using namespace glm;
 using namespace std;
+#include <iostream>
+#include <bitset>
 
 
 #include "../nanosvg-master/src/nanosvg.h"
