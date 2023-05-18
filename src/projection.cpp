@@ -167,12 +167,9 @@ void processInput(GLFWwindow *window)
     if (cameraMode == "Up")
     {
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        {
-            camera.ProcessUp(upOffset);
-            ROS_ERROR("Up INCREASES");
-        }
+            camera.ProcessUp(FORWARD, deltaTime);
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            camera.ProcessUp(-upOffset);
+            camera.ProcessUp(BACKWARD, deltaTime);
     }
     // if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
     //     ROS_ERROR("processing input");
@@ -266,30 +263,6 @@ void drawOctagon(int i, int j)
         // drawWall(i, j, k);
     }
 
-    // glBegin(GL_QUADS);
-    //// draw the bottom face
-    ////for (int i = 0; i < 8; i++)
-    ////{
-    ////    float angle = i * 2 * M_PI / 8;
-    ////    glVertex3f(x + size * cos(angle), y + size * sin(angle), z);
-    ////}
-    //// draw the walls
-    // for (int i = 0; i < 8; i++)
-    //{
-    //     float angle1 = (i + 0.5) * 2 * M_PI / 8;
-    //     float angle2 = (i + 1.5) * 2 * M_PI / 8;
-    //     glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z);
-    //     glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z);
-    //     glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z + height);
-    //     glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z + height);
-    // }
-    //// draw the top face
-    ////for (int i = 0; i < 8; i++)
-    ////{
-    ////    float angle = i * 2 * M_PI / 8;
-    ////    glVertex3f(x + size * cos(angle), y + size * sin(angle), z + height);
-    ////}
-    // glEnd();
 }
 
 void drawMaze()
@@ -299,14 +272,6 @@ void drawMaze()
 
         for (int j = 0; j < COLUMNS; j++)
         {
-
-            // not sure what i was trying to do here
-            //  int octagonNumber = (i * 7) + (j);
-            //  auto it = std::find(std::begin(array1), std::end(array1), octagonNumber);
-            //  if (it !=std::end(array1)){
-
-            // }
-            // if (checkOctagon) drawOctagon(i, j);
             if (show_octagon[i][j])
                 drawOctagon(i, j);
         }
@@ -335,6 +300,26 @@ static void error_callback(int error, const char *description)
 
 void saveCoordinates()
 {
+
+    std::ofstream file("calibration_variables.csv", std::ios::app);  // Open the file in append mode
+
+    if (file.is_open()) {
+        // Write the variable name and value to the file
+        file << "frustumLeft" << "," << frustumLeft << "\n" 
+        <<"frustumRight" <<","<< frustumRight << "\n"
+        <<"frustumTop" <<","<< frustumTop << "\n"
+        <<"frustumBottom" <<","<< frustumBottom << "\n"
+        <<"frustumNearVal" <<","<< frustumNearVal << "\n"
+        <<"frustumFarVal" <<","<< frustumFarVal << "\n"
+        <<"frustumRight" <<","<< frustumRight << "\n"
+        <<"Camera Matrix"<<","<<glm::to_string(camera.GetViewMatrix());
+        // << "view matrix"<<","<< camera.GetViewMatrix().x<<camera.GetViewMatrix().y<<camera.GetViewMatrix().z;
+
+        file.close();
+        std::cout << "Variable saved to " << "calibration_variables.csv" << " successfully.\n";
+    } else {
+        std::cerr << "Unable to open the file " << "calibration_variables.csv" << "\n";
+    }
     // returns the pixel position of the bottom left corner of rect
     for (int i = 0; i < 4; i++)
     {
@@ -380,25 +365,6 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         cameraMode = "Up";
         ROS_ERROR(cameraMode.c_str());
     }
-    // if (key == GLFW_KEY_4 && action == GLFW_RELEASE) {
-    //    selectedSquare = 3;
-    // }
-
-    //// Listen for arrow key input to move selected square
-    // if (key == GLFW_KEY_LEFT && action == GLFW_RELEASE) {
-    //     squarePositions[selectedSquare][0] -= 0.01f;
-    // }
-
-    ////@rony: fix the stuff below
-    // if (key == GLFW_KEY_RIGHT && action == GLFW_RELEASE) {
-    //     squarePositions[selectedSquare][0] += 0.01f;
-    // }
-    // if (key == GLFW_KEY_UP && action == GLFW_RELEASE) {
-    //     squarePositions[selectedSquare][1] += 0.01f;
-    // }
-    // if (key == GLFW_KEY_DOWN && action == GLFW_RELEASE) {
-    //     squarePositions[selectedSquare][1] -= 0.01f;
-    // }
 
     if (key == GLFW_KEY_ENTER && action == GLFW_RELEASE)
     {
@@ -448,19 +414,15 @@ void drawRect(float x, float y, float width, float height)
 {
     glBegin(GL_QUADS);
 
-    // glTexCoord2f(x, y);
     glTexCoord2f(0.0f, 0.0f);
     glVertex2f(x, y);
 
-    // glTexCoord2f(x+texWidth, y);
     glTexCoord2f(1.0f, 0.0f);
     glVertex2f(x + width, y);
 
-    // glTexCoord2f(x+texWidth, y+texHeight);
     glTexCoord2f(1.0f, 1.0f);
     glVertex2f(x + width, y + height);
 
-    // glTexCoord2f(x, y+texHeight);
     glTexCoord2f(0.0f, 1.0f);
     glVertex2f(x, y + height);
     glEnd();
@@ -494,17 +456,6 @@ void fillCoordinates()
             else
                 continue;
 
-            // for (int k = 0; k < NUMBER_WALLS; k++) {
-
-            // for (int l = 0; l < NUMBER_WALL_VERTICES; l++) {
-
-            //                for (int m = 0; m < 3) {
-
-            //                   /* wall_vertices[i][j][k][l][m]*/
-            //	vertices_octagon[index + k * 3] = RADIUS * std::cos(angle * M_PI / 180.0) + x_offset;
-            // vertices_octagon[index + k * 3 + 1] = RADIUS * std::sin(angle * M_PI / 180.0f) + y_offset;
-            //	vertices_octagon[index + k * 3 + 2] = HEIGHT_WALL;
-            //	{
 
             // gonna check for which walls are up and set the truth value for them
 
@@ -542,22 +493,7 @@ void fillCoordinates()
                 else
                     continue;
             }
-            // int octagonNumber = (i * 7) + (j);
-            // show_wall[i][j][k] = false;
-            // auto it = std::find_if(array1.cbegin(), array1.cend(), compare(octagonNumber));
-            // if (it != array1.end()){
-            //     show_wall[i][j][k] = true;
 
-            // }
-
-            // calculating all the vertices on the wall
-
-            // glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z);
-            // glVertex3f(x + size * cos(angle2), y + size * sin(angle2), z + height);
-            // glVertex3f(x + size * cos(angle1), y + size * sin(angle1), z + height);
-            //}
-
-            //  }
         }
     }
 }
@@ -570,7 +506,6 @@ int main(int argc, char **argv)
     for (int i = 0; i < 49; ++i) {
         array1[i] = startValue + i;
         array2[i] = 255;
-
     }
 
     fillCoordinates();
@@ -579,15 +514,6 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
     ROS_ERROR("main ran");
-
-    // ILuint image;
-    // ilInit();
-    // iluInit();
-    // ilutInit();
-
-    // ilInit();
-
-    // ilutRenderer(ILUT_OPENGL);
 
     ILuint ImgId = 0;
     ilGenImages(1, &ImgId);
@@ -613,7 +539,6 @@ int main(int argc, char **argv)
     ROS_ERROR("%d", texWidth);
     ROS_ERROR("%d", texHeight);
 
-    // ILubyte* imageData = ilGetData();
 
     glfwSetErrorCallback(error_callback);
 
@@ -641,10 +566,6 @@ int main(int argc, char **argv)
     // Set the window resize callback
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    // glMatrixMode(GL_MODELVIEW);
-    // glLoadIdentity();
-    // glTranslatef(0, 0, 0);
-
     // Create an FBO and attach the texture to it
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -666,12 +587,6 @@ int main(int argc, char **argv)
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        ////glViewport(0, 0, winWidth, winHeight);
-
-        //// Clear the FBO
-        // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        // glClear(GL_COLOR_BUFFER_BIT);
         processInput(window);
 
         glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
@@ -679,6 +594,7 @@ int main(int argc, char **argv)
 
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
+
         // glFrustum(-2, 2, -2, 2, 1, 10);
         glFrustum(frustumLeft, frustumRight, frustumBottom, frustumTop, frustumNearVal, frustumFarVal);
         // glFrustum(-50,50,-50,1,1,50);
@@ -689,13 +605,7 @@ int main(int argc, char **argv)
 
         glTranslatef(0, 0, -1);
 
-        //      // Draw squares with updated positions
-        // glGenTextures(1, &textureID);
-        // glBindTexture(GL_TEXTURE_2D, textureID);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
 
         //// Load image data into texture
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH),
@@ -704,7 +614,6 @@ int main(int argc, char **argv)
 
         // Enable texture mapping
         glEnable(GL_TEXTURE_2D);
-        // gluPerspective()
 
         drawMaze();
 

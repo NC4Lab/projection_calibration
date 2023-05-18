@@ -27,6 +27,8 @@ using namespace boost::placeholders;
 #include <ros/ros.h>
 #include <ros/console.h>
 
+#include <fstream>
+#include <string>
 //#include <windows.h>
 
 //#include <gl/GL.h>
@@ -44,6 +46,7 @@ using namespace boost::placeholders;
 #include <cmath>
 #include "glm/glm.hpp"
 #include "glm/ext.hpp"
+#include "glm/gtx/string_cast.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "learnopengl/shader_m.h"
 #include "learnopengl/camera.h" 

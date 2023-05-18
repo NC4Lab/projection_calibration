@@ -74,6 +74,17 @@ public:
         return glm::lookAt(Position, Position + Front, Up);
     }
 
+    void ProcessUp(Camera_Movement direction, float deltaTime){
+
+        float velocity = MovementSpeed * deltaTime;
+        if (direction == FORWARD)
+            Position += Up * velocity;
+        if (direction == BACKWARD)
+            Position -= Up * velocity;
+        
+
+    }
+
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
     void ProcessKeyboard(Camera_Movement direction, float deltaTime)
     {
@@ -110,8 +121,6 @@ public:
         updateCameraVectors();
     }
 
-    
-
     // processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
     void ProcessMouseScroll(float yoffset)
     {
@@ -127,11 +136,7 @@ public:
         updateCameraVectors();
     }
 
-    void ProcessUp(float offset){
-        translationOffset += offset;
-        updateCameraVectors(); 
 
-    }
 
 private:
     // calculates the front vector from the Camera's (updated) Euler Angles
@@ -149,7 +154,7 @@ private:
         Right[0] = cos(glm::radians(Roll)) * Right_temp[0] - sin(glm::radians(Roll)) * Right_temp[1];
         Right[1] = sin(glm::radians(Roll)) * Right_temp[0] + cos(glm::radians(Roll)) * Right_temp[1];
 
-        Up = glm::normalize(glm::cross(Right, Front)) + translationOffset;
+        Up = glm::normalize(glm::cross(Right, Front));
     }
 };
 #endif
