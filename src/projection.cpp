@@ -24,15 +24,13 @@ int monitor_count;
 // int array1[8] = {13,19,20,25,26,27,32,33};
 // int array2[8] = {191,32,123,32,119,2,183,2};
 
-/**NOTES: 0,0 number refers to the bottom left oct. 6,6 would refer to top right in the number system. 
+/**NOTES: 0,0 number refers to the bottom left oct. 6,6 would refer to top right in the number system.
  * However, when the coordinates are caluclated, they're corrected to represent Rebecca's code.
- * So, theoretically, it should correct things automatically. 
+ * So, theoretically, it should correct things automatically.
  */
 
-
-
-int array1[49];
-int array2[49];
+vector<int> array1{0,6,42};
+vector<int> array2{255,1,1};
 
 Camera camera(glm::vec3(0.0f, 0.0f, 200.0f));
 float mouseOffset = 1.0f;
@@ -42,7 +40,7 @@ float zoomOffset = 1.0f;
 float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
 
-float rollOffset = 5.0f;
+float rollOffset = 0.5f;
 float upOffset = 0.05f;
 
 // z component of the wall
@@ -61,9 +59,8 @@ bool show_wall[ROWS][COLUMNS][NUMBER_WALLS];
 bool show_octagon[ROWS][COLUMNS];
 GLfloat octagon_vertices[ROWS][COLUMNS][NUMBER_OCT_VERTICES][3];
 
-
-//coordinate correction for the maze 
-float scalingFactor = 30.0f; //each floating point value in the coordinate system refers 1cm in real world, hopefully. 
+// coordinate correction for the maze
+float scalingFactor = 30.0f;     // each floating point value in the coordinate system refers 1cm in real world, hopefully.
 const float WALL_HEIGHT = 15.0f; // wall height in cm
 
 const float OCTAGON_SIZE = 0.5f * scalingFactor;
@@ -76,7 +73,6 @@ int frustumBottom = -2 * scalingFactor;
 int frustumTop = 2 * scalingFactor;
 int frustumNearVal = 2 * scalingFactor;
 int frustumFarVal = 12 * scalingFactor;
-
 
 // glFrustum(frustumLeft, frustumRight, frustumBottom, frustumTop, frustumNearVal, frustumFarVal);
 
@@ -151,6 +147,10 @@ void processInput(GLFWwindow *window)
             camera.ProcessKeyboard(LEFT, deltaTime);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
             camera.ProcessKeyboard(RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+            camera.ProcessUp(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+            camera.ProcessUp(BACKWARD, deltaTime);
     }
 
     if (cameraMode == "Roll")
@@ -162,36 +162,33 @@ void processInput(GLFWwindow *window)
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
             camera.ProcessRoll(-rollOffset);
-    }
 
-    if (cameraMode == "Up")
-    {
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            camera.ProcessUp(FORWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            camera.ProcessUp(BACKWARD, deltaTime);
-    }
-    // if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
-    //     ROS_ERROR("processing input");
+        // if (cameraMode == "Up")
+        // {
 
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-    {
-        camera.ProcessMouseMovement(0, mouseOffset);
-    }
+        // }
+        // if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
+        //     ROS_ERROR("processing input");
 
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-    {
-        camera.ProcessMouseMovement(0, -mouseOffset);
-    }
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        {
+            camera.ProcessMouseMovement(0, mouseOffset);
+        }
 
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-    {
-        camera.ProcessMouseMovement(mouseOffset, 0);
-    }
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        {
+            camera.ProcessMouseMovement(0, -mouseOffset);
+        }
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-    {
-        camera.ProcessMouseMovement(-mouseOffset, 0);
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        {
+            camera.ProcessMouseMovement(mouseOffset, 0);
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        {
+            camera.ProcessMouseMovement(-mouseOffset, 0);
+        }
     }
 
     if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_RELEASE)
@@ -262,9 +259,8 @@ void drawOctagon(int i, int j)
 
         // drawWall(i, j, k);
     }
-
 }
-
+#define INT_BITS 8
 void drawMaze()
 {
     for (int i = 0; i < ROWS; i++)
@@ -301,24 +297,39 @@ static void error_callback(int error, const char *description)
 void saveCoordinates()
 {
 
-    std::ofstream file("calibration_variables.csv", std::ios::app);  // Open the file in append mode
+    std::ofstream file("calibration_variables.csv", std::ios::app); // Open the file in append mode
 
-    if (file.is_open()) {
+    if (file.is_open())
+    {
         // Write the variable name and value to the file
-        file << "frustumLeft" << "," << frustumLeft << "\n" 
-        <<"frustumRight" <<","<< frustumRight << "\n"
-        <<"frustumTop" <<","<< frustumTop << "\n"
-        <<"frustumBottom" <<","<< frustumBottom << "\n"
-        <<"frustumNearVal" <<","<< frustumNearVal << "\n"
-        <<"frustumFarVal" <<","<< frustumFarVal << "\n"
-        <<"frustumRight" <<","<< frustumRight << "\n"
-        <<"Camera Matrix"<<","<<glm::to_string(camera.GetViewMatrix());
+        file << "frustumLeft"
+             << "," << frustumLeft << "\n"
+             << "frustumRight"
+             << "," << frustumRight << "\n"
+             << "frustumTop"
+             << "," << frustumTop << "\n"
+             << "frustumBottom"
+             << "," << frustumBottom << "\n"
+             << "frustumNearVal"
+             << "," << frustumNearVal << "\n"
+             << "frustumFarVal"
+             << "," << frustumFarVal << "\n"
+             << "frustumRight"
+             << "," << frustumRight << "\n"
+             << "Camera Matrix"
+             << "," << glm::to_string(camera.GetViewMatrix());
         // << "view matrix"<<","<< camera.GetViewMatrix().x<<camera.GetViewMatrix().y<<camera.GetViewMatrix().z;
 
         file.close();
-        std::cout << "Variable saved to " << "calibration_variables.csv" << " successfully.\n";
-    } else {
-        std::cerr << "Unable to open the file " << "calibration_variables.csv" << "\n";
+        std::cout << "Variable saved to "
+                  << "calibration_variables.csv"
+                  << " successfully.\n";
+    }
+    else
+    {
+        std::cerr << "Unable to open the file "
+                  << "calibration_variables.csv"
+                  << "\n";
     }
     // returns the pixel position of the bottom left corner of rect
     for (int i = 0; i < 4; i++)
@@ -428,6 +439,14 @@ void drawRect(float x, float y, float width, float height)
     glEnd();
 }
 
+
+unsigned int leftRotate(unsigned int number, unsigned int rotation) {
+    rotation = rotation % (sizeof(unsigned int) * 8);  // Ensure rotation is within valid range
+
+    return (number << rotation) | (number >> (INT_BITS - rotation));
+}
+
+
 void fillCoordinates()
 {
     for (int i = 0; i < ROWS; i++)
@@ -438,28 +457,40 @@ void fillCoordinates()
 
             // indices being converted into the coordinate system
 
-            int x = (6 - i) * scalingFactor; //correction to be coherent with rebecca's coordinate system.
-            int y = (j) * scalingFactor;
-            
+            int x = (j) * scalingFactor; // correction to be coherent with rebecca's coordinate system.
+            int y = (6 - i) * scalingFactor;
+
             // check if the octagon is in the path array, if it is fill the octagon spot with truth,
             //  else skip the iteration and save time and memory
-            int octagonNumber = (i * 7) + (j);
+            int octagonNumber = (i * 6) + (j) + i;
+            ROS_ERROR("octagon Number %d", octagonNumber);
             show_octagon[i][j] = false;
-            int *it;
-            it = std::find(begin(array1), end(array1), octagonNumber);
+            std::vector<int>::iterator it;
+            it = std::find(array1.begin(), array1.end(), octagonNumber);
             int wallIndex;
             if (it != end(array1))
             {
-                wallIndex = *it;
+                wallIndex = it - array1.begin();
                 show_octagon[i][j] = true;
             }
             else
                 continue;
 
-
             // gonna check for which walls are up and set the truth value for them
 
-            std::bitset<8> binary(array2[wallIndex]);
+
+            unsigned int leftRotatedNumber = leftRotate(array2[wallIndex],(unsigned int) 3);
+
+            std::bitset<8> binary(leftRotatedNumber);
+            std::string binaryString = binary.to_string();
+
+            
+
+
+            ROS_ERROR("WallIndex Number %d", wallIndex);
+            ROS_ERROR("array Number %d", array2[wallIndex]);
+            ROS_ERROR("Binary Number ----- ");
+            ROS_ERROR(binaryString.c_str());
             for (int k = binary.size() - 1; k >= 0; --k)
             {
                 bool bit = binary[k];
@@ -467,6 +498,8 @@ void fillCoordinates()
 
                 if (bit)
                 {
+
+                    ROS_ERROR("boi is tru %d", k);
                     show_wall[i][j][k] = true;
 
                     float angle1 = (k + 0.5) * 2 * M_PI / 8;
@@ -493,7 +526,6 @@ void fillCoordinates()
                 else
                     continue;
             }
-
         }
     }
 }
@@ -503,10 +535,11 @@ int main(int argc, char **argv)
 
     int startValue = 0;
 
-    for (int i = 0; i < 49; ++i) {
-        array1[i] = startValue + i;
-        array2[i] = 255;
-    }
+    // for (int i = 0; i < 20  ; ++i)
+    // {
+    //     array1.push_back(startValue + i);
+    //     array2.push_back(255);
+    // }
 
     fillCoordinates();
 
@@ -538,7 +571,6 @@ int main(int argc, char **argv)
 
     ROS_ERROR("%d", texWidth);
     ROS_ERROR("%d", texHeight);
-
 
     glfwSetErrorCallback(error_callback);
 
@@ -604,8 +636,6 @@ int main(int argc, char **argv)
         glLoadMatrixf(glm::value_ptr(camera.GetViewMatrix()));
 
         glTranslatef(0, 0, -1);
-
-
 
         //// Load image data into texture
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH),

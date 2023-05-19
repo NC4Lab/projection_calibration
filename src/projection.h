@@ -36,6 +36,10 @@ using namespace boost::placeholders;
 #include <cstdio>
 #include <cstdlib>
 
+#include <iostream>     // std::cout
+#include <algorithm>    // std::find
+#include <vector>  
+
 //#include "../lodepng/lodepng.h"
 #include <stdio.h>
 #include <string.h>
