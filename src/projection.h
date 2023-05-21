@@ -46,6 +46,8 @@ using namespace boost::placeholders;
 #include <math.h>
 #include <float.h>
 #include <iostream>
+#include <sstream>
+#include <regex>
 #include <vector>
 #include <cmath>
 #include "glm/glm.hpp"

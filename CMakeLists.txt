@@ -13,9 +13,12 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   genmsg
   roslib
-#  OpenCV
-#  Qt5OpenGL
+  cv_bridge
 )
+find_package(glfw3 REQUIRED)
+find_package(glm REQUIRED)
+# find_package(OpenGL REQUIRED)
+find_package(OpenCV REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -117,15 +120,16 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
+
 ###########
 ## Build ##
 ###########
-set(PROJECTION_DIR "C:/ws/src/projection_calibration")
-set(glfw3_DIR "C:/Program Files (x86)/GLFW/lib/cmake/glfw3/")
-set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include")
-set(IL_LIB_DIR "C:/Program Files (x86)/IL/lib/x64/Release/")
-set(glm_DIR "C:/Program Files (x86)/glm/cmake/glm/")
-
+# TODO - README.md should ask user to install these libraries and create environment variables pointing to them.
+# set(PROJECTION_DIR "C:/ws/src/projection_calibration")
+# set(glfw3_DIR "C:/Program Files (x86)/GLFW/lib/cmake/glfw3/")
+# set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include")
+# set(IL_LIB_DIR "C:/Program Files (x86)/IL/lib/x64/Release/")
+# set(glm_DIR "C:/Program Files (x86)/glm/cmake/glm/")
 
 
 ## Specify additional locations of header files
@@ -135,20 +139,19 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   #${PROJECTION_DIR}/glfw-3.3.8/include
  # ${PROJECTION_DIR}/glfw-3.3.8/deps/glad
-  ${glfw3_DIR}/../../../include
-  ${IL_INCLUDE_DIR}
+  # ${glfw3_dir}/../../../include
+  ${glfw3_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  $ENV{IL_INCLUDE_DIR}
   ${PROJECTION_DIR}/src/glm
  # "C:/Program Files (x86)/IL/include"
  # ${PROJECTION_DIR}/dll
 
 )
 
-# find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED)
-#find_package(glm REQUIRED)
-find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS ${IL_LIB_DIR})
-find_library(ILU_LIBRARY NAMES ILU PATHS ${IL_LIB_DIR})
-find_library(ILUT_LIBRARY NAMES ILUT PATHS ${IL_LIB_DIR})
+find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS $ENV{IL_LIB_DIR})
+find_library(ILU_LIBRARY NAMES ILU PATHS $ENV{IL_LIB_DIR})
+find_library(ILUT_LIBRARY NAMES ILUT PATHS $ENV{IL_LIB_DIR})
 #find_library(ILUT_LIBRARY NAMES ILUT.lib PATH "C:/Program Files (x86)/IL/lib/x64/Release/ILUT.lib")
 #find_library(IL_LIBRARY NAMES DevIL ILU ILUT PATHS ${IL_LIB_DIR})
 #find_library(DEVIL_LIBRARIES NAMES DevIL ILU ILUT PATHS ${IL_LIBRARY})
@@ -177,29 +180,14 @@ add_executable(${PROJECT_NAME}_node
 	src/projection.h
 #	lodepng/lodepng.cpp
 #	lodepng/lodepng.h
-	nanosvg-master/src/nanosvg.h
-	nanosvg-master/src/nanosvgrast.h
+	# nanosvg-master/src/nanosvg.h
+	# nanosvg-master/src/nanosvgrast.h
 	src/glad.c
 	src/glad/glad.h
 	src/glm/glm.hpp
 	src/learnopengl/camera.h
 	src/learnopengl/shader_m.h
 	)
-
-## Declare a C++ library
- #add_library(${PROJECT_NAME}
-#   glfw-3.3.8/include/GLFW/glfw3.h
- #  lodepng/lodepng.h
-#)
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Declare a C++ executable
-## With catkin_make all packages are built within a single CMake context
-## The recommended prefix ensures that target names across packages don't collide
-#target_link_libraries(freeglut.lib)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -209,6 +197,7 @@ target_link_libraries(${PROJECT_NAME}_node
 	${Boost_LIBRARIES}
 	${IL_LIBRARY} ${ILU_LIBRARY} ${ILUT_LIBRARY}	
 	glfw GLAD # glm
+  ${OpenCV_LIBRARIES}
 )
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

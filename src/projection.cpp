@@ -1,281 +1,54 @@
 #include <ros/ros.h>
 #include <ros/package.h>
-
 #include "projection.h"
+#include <opencv2/calib3d.hpp>
+#include <opencv2/core/types.hpp>
+#include <opencv2/core/hal/interface.h>
+// #include "opencv2/highgui.hpp"
+// #include <opencv2/imgproc/hal/hal.hpp>                
+#include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
 
-using namespace std;
+vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height) {
+    vector<cv::Point2f> rectPoints;
+    rectPoints.push_back(cv::Point2f(x0, y0));
+    rectPoints.push_back(cv::Point2f(x0, y0+height));
+    rectPoints.push_back(cv::Point2f(x0+width, y0+height));
+    rectPoints.push_back(cv::Point2f(x0+width, y0));
+
+    return rectPoints;
+}
+
+float wallWidth = 0.02f;
+float wallSep = 0.05f;
+vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallWidth);
+
 float squarePositions[4][2] = {
-    {-0.1f, 0.1f}, // top-left square
-    {0.1f, 0.1f},  // top-right square
-    {0.0f, 0.0f},  // bottom-right square
-    {-0.1f, -0.1f} // bottom-left square
+    {-0.1f, 0.1f},  // top-left square
+    {0.1f, 0.1f},   // top-right square
+    {0.1f, -0.1f},   // bottom-right square
+    {-0.1f, -0.1f}  // bottom-left square
 };
+
+cv::Mat H = cv::Mat::eye(3,3,CV_32F);
+
 int selectedSquare = 0;
-int winWidth = 3840;
+int winWidth = 3840; 
 int winHeight = 2160;
-GLFWwindow *window;
+GLFWwindow* window;
 GLuint fbo;
 GLuint fboTexture;
-GLFWmonitor *monitor = NULL;
+GLFWmonitor* monitor = NULL;
 int monitorNumber = 0;
-GLFWmonitor **monitors;
+GLFWmonitor** monitors;
 int monitor_count;
 
-// int array1[8] = {13,19,20,25,26,27,32,33};
-// int array2[8] = {191,32,123,32,119,2,183,2};
-
-/**NOTES: 0,0 number refers to the bottom left oct. 6,6 would refer to top right in the number system.
- * However, when the coordinates are caluclated, they're corrected to represent Rebecca's code.
- * So, theoretically, it should correct things automatically.
- */
-
-vector<int> array1{0,6,42};
-vector<int> array2{255,1,1};
-
-Camera camera(glm::vec3(0.0f, 0.0f, 200.0f));
-float mouseOffset = 1.0f;
-float zoomOffset = 1.0f;
-
-// timing
-float deltaTime = 0.0f; // time between current frame and last frame
-float lastFrame = 0.0f;
-
-float rollOffset = 0.5f;
-float upOffset = 0.05f;
-
-// z component of the wall
-int Z = 0;
-
-// Define the number of octagons in a row and column
-const int ROWS = 7;
-const int COLUMNS = 7;
-const int NUMBER_OCT_VERTICES = 8;
-const int NUMBER_WALL_VERTICES = 4;
-const int NUMBER_WALLS = 8;
-
-// last one is x,y,z
-GLfloat wall_vertices[ROWS][COLUMNS][NUMBER_WALLS][NUMBER_WALL_VERTICES][3];
-bool show_wall[ROWS][COLUMNS][NUMBER_WALLS];
-bool show_octagon[ROWS][COLUMNS];
-GLfloat octagon_vertices[ROWS][COLUMNS][NUMBER_OCT_VERTICES][3];
-
-// coordinate correction for the maze
-float scalingFactor = 30.0f;     // each floating point value in the coordinate system refers 1cm in real world, hopefully.
-const float WALL_HEIGHT = 15.0f; // wall height in cm
-
-const float OCTAGON_SIZE = 0.5f * scalingFactor;
-
-// frustum related variables
-string cameraMode = "";
-int frustumLeft = -2 * scalingFactor;
-int frustumRight = 2 * scalingFactor;
-int frustumBottom = -2 * scalingFactor;
-int frustumTop = 2 * scalingFactor;
-int frustumNearVal = 2 * scalingFactor;
-int frustumFarVal = 12 * scalingFactor;
-
-// glFrustum(frustumLeft, frustumRight, frustumBottom, frustumTop, frustumNearVal, frustumFarVal);
 
 ILint texWidth, texHeight;
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
-{
-
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
-    if (cameraMode == "Frustrum Left and Right")
-    {
-        ROS_ERROR(cameraMode.c_str());
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            frustumLeft++;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            frustumLeft--;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            frustumRight--;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            frustumRight++;
-    }
-
-    if (cameraMode == "Frustum Top and Bottom")
-    {
-        ROS_ERROR(cameraMode.c_str());
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            frustumTop++;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            frustumTop--;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            frustumBottom--;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            frustumBottom++;
-    }
-
-    if (cameraMode == "Frustum Far and Near")
-    {
-        ROS_ERROR(cameraMode.c_str());
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            frustumFarVal++;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        {
-            if ((frustumFarVal--) == 0)
-            {
-                ROS_ERROR("Far Val minimum Val");
-            }
-            else
-                frustumFarVal--;
-        }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            if ((frustumNearVal--) == 0)
-            {
-                ROS_ERROR("Far Val minimum Val");
-            }
-            else
-                frustumNearVal--;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            frustumNearVal++;
-    }
-
-    if (cameraMode == "Camera")
-    {
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            camera.ProcessKeyboard(FORWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            camera.ProcessKeyboard(BACKWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            camera.ProcessKeyboard(LEFT, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            camera.ProcessKeyboard(RIGHT, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-            camera.ProcessUp(FORWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-            camera.ProcessUp(BACKWARD, deltaTime);
-    }
-
-    if (cameraMode == "Roll")
-    {
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        {
-            camera.ProcessRoll(rollOffset);
-            ROS_ERROR("ROLL INCREASES");
-        }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            camera.ProcessRoll(-rollOffset);
-
-        // if (cameraMode == "Up")
-        // {
-
-        // }
-        // if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS)
-        //     ROS_ERROR("processing input");
-
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        {
-            camera.ProcessMouseMovement(0, mouseOffset);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        {
-            camera.ProcessMouseMovement(0, -mouseOffset);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        {
-            camera.ProcessMouseMovement(mouseOffset, 0);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        {
-            camera.ProcessMouseMovement(-mouseOffset, 0);
-        }
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_RELEASE)
-    {
-        camera.ProcessMouseScroll(mouseOffset);
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_X) == GLFW_RELEASE)
-    {
-        camera.ProcessMouseScroll(-mouseOffset);
-    }
-
-    // float xpos = static_cast<float>(xposIn);
-    // float ypos = static_cast<float>(yposIn);
-
-    // if (firstMouse)
-    //{
-    //     lastX = xpos;
-    //     lastY = ypos;
-    //     firstMouse = false;
-    // }
-
-    // float xoffset = xpos - lastX;
-    // float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-    // lastX = xpos;
-    // lastY = ypos;
-
-    // camera.ProcessMouseMovement(xoffset, yoffset);
-}
-
-void drawWall(int i, int j, int k)
-{
-
-    glBegin(GL_QUADS);
-
-    // right now the number of vertices for each wall is hard coded (4 atm)
-
-    // glTexCoord2f(x, y);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3fv(wall_vertices[i][j][k][0]);
-
-    // glTexCoord2f(x+texWidth, y);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3fv(wall_vertices[i][j][k][1]);
-
-    // glTexCoord2f(x+texWidth, y+texHeight);
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3fv(wall_vertices[i][j][k][2]);
-
-    // glTexCoord2f(x, y+texHeight);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3fv(wall_vertices[i][j][k][3]);
-    glEnd();
-}
-void drawOctagon(int i, int j)
-{
-    // for some reason Abhishek thought calling million different functions for the same thing would
-    // a brilliant idea
-
-    for (int k = 0; k < NUMBER_WALLS; k++)
-    {
-        if (show_wall[i][j][k])
-        {
-            glBindTexture(GL_TEXTURE_2D, fboTexture);
-            drawWall(i, j, k);
-        }
-
-        // drawWall(i, j, k);
-    }
-}
-#define INT_BITS 8
-void drawMaze()
-{
-    for (int i = 0; i < ROWS; i++)
-    {
-
-        for (int j = 0; j < COLUMNS; j++)
-        {
-            if (show_octagon[i][j])
-                drawOctagon(i, j);
-        }
-    }
-}
-
 // Callback function for handling window resize events
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
@@ -283,274 +56,229 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height)
 void checkGLError()
 {
     GLenum err;
-    while ((err = glGetError()) != GL_NO_ERROR)
-    {
+    while ((err = glGetError()) != GL_NO_ERROR) {
         ROS_ERROR("OpenGL error: %d", static_cast<int>(err));
     }
 }
 
-static void error_callback(int error, const char *description)
+static void error_callback(int error, const char* description)
 {
     ROS_ERROR("Error: %s\n", description);
 }
 
-void saveCoordinates()
-{
+void saveCoordinates() {
+	for (int i = 0; i < 4; i++) {
+		int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * winWidth);
+		int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * winHeight);
+		ROS_ERROR("Square %d position: (%d, %d)\n", i, pixelX, pixelY);
+	}
+//       int pixelWidth = (int)(0.1f * winWidth);
+//       int pixelHeight = (int)(0.1f * winHeight);
 
-    std::ofstream file("calibration_variables.csv", std::ios::app); // Open the file in append mode
-
-    if (file.is_open())
-    {
-        // Write the variable name and value to the file
-        file << "frustumLeft"
-             << "," << frustumLeft << "\n"
-             << "frustumRight"
-             << "," << frustumRight << "\n"
-             << "frustumTop"
-             << "," << frustumTop << "\n"
-             << "frustumBottom"
-             << "," << frustumBottom << "\n"
-             << "frustumNearVal"
-             << "," << frustumNearVal << "\n"
-             << "frustumFarVal"
-             << "," << frustumFarVal << "\n"
-             << "frustumRight"
-             << "," << frustumRight << "\n"
-             << "Camera Matrix"
-             << "," << glm::to_string(camera.GetViewMatrix());
-        // << "view matrix"<<","<< camera.GetViewMatrix().x<<camera.GetViewMatrix().y<<camera.GetViewMatrix().z;
-
-        file.close();
-        std::cout << "Variable saved to "
-                  << "calibration_variables.csv"
-                  << " successfully.\n";
-    }
-    else
-    {
-        std::cerr << "Unable to open the file "
-                  << "calibration_variables.csv"
-                  << "\n";
-    }
-    // returns the pixel position of the bottom left corner of rect
-    for (int i = 0; i < 4; i++)
-    {
-        int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * winWidth);
-        int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * winHeight);
-        ROS_ERROR("Square %d position: (%d, %d)\n", i, pixelX, pixelY);
-    }
-    //       int pixelWidth = (int)(0.1f * winWidth);
-    //       int pixelHeight = (int)(0.1f * winHeight);
-
-    // ROS_ERROR("Pixel dimensions, width is: %d and height is %d", pixelWidth, pixelHeight);
+	//ROS_ERROR("Pixel dimensions, width is: %d and height is %d", pixelWidth, pixelHeight);
 }
 
-void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
-{
+void computeHomography() {
+    vector<cv::Point2f> targetCorners;
+    vector<cv::Point2f> imageCorners;
 
-    if (key == GLFW_KEY_1 && action == GLFW_RELEASE)
-    {
-        cameraMode = "Frustum Left and Right";
-    }
-    if (key == GLFW_KEY_2 && action == GLFW_RELEASE)
-    {
-        cameraMode = "Frustum Top and Bottom";
-    }
-    if (key == GLFW_KEY_3 && action == GLFW_RELEASE)
-    {
-        cameraMode = "Frustum Far and Near";
-    }
-    if (key == GLFW_KEY_4 && action == GLFW_RELEASE)
-    {
-        cameraMode = "Camera";
-        ROS_ERROR(cameraMode.c_str());
+    for (int i=0; i<4; i++) {
+        targetCorners.push_back(cv::Point2f(squarePositions[i][0], squarePositions[i][1]));
     }
 
-    if (key == GLFW_KEY_5 && action == GLFW_RELEASE)
-    {
-        cameraMode = "Roll";
-        ROS_ERROR(cameraMode.c_str());
-    }
+    imageCorners = createRectPoints(0.0f, 0.0f, 6.0*wallSep, 6.0*wallSep);
+    
 
-    if (key == GLFW_KEY_6 && action == GLFW_RELEASE)
-    {
-        cameraMode = "Up";
-        ROS_ERROR(cameraMode.c_str());
-    }
+    cerr << "target corners " << targetCorners << "\n"
+    << "square poisitons " << squarePositions << "\n"
+    << "imageCorners " << imageCorners << "\n";
 
-    if (key == GLFW_KEY_ENTER && action == GLFW_RELEASE)
-    {
-        saveCoordinates();
-    }
+    H = findHomography(imageCorners, targetCorners);
+    // H = findHomography(targetCorners, imageCorners);
 
-    if (key == GLFW_KEY_F && action == GLFW_RELEASE)
-    {
-        monitors = glfwGetMonitors(&monitor_count);
+    // cerr << H;
 
-        // find the second monitor (index 1) by checking its position
-        for (int i = 0; i < monitor_count; i++)
-        {
-            const GLFWvidmode *mode = glfwGetVideoMode(monitors[i]);
-            int monitor_x, monitor_y;
-            glfwGetMonitorPos(monitors[i], &monitor_x, &monitor_y);
-            if (monitor_x != 0 || monitor_y != 0)
-            {
-                monitorNumber = i;
-                monitor = monitors[i];
-                break;
+    // float value = ptMat.at<float>(0, 2);
+    // ROS_ERROR("The value is: %f", value);
+
+}
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+
+    if (action == GLFW_RELEASE) {
+        if (key == GLFW_KEY_1) {
+            selectedSquare = 0;
+        }
+        else if (key == GLFW_KEY_2) {
+            selectedSquare = 1;
+        }
+        else if (key == GLFW_KEY_3) {
+            selectedSquare = 2;
+        }
+        else if (key == GLFW_KEY_4) {
+            selectedSquare = 3;
+        }
+        else if (key == GLFW_KEY_ENTER) {
+            saveCoordinates();
+        }
+        else if (key == GLFW_KEY_F) {
+			monitors = glfwGetMonitors(&monitor_count);
+            //GLFWmonitor* monitor = glfwGetWindowMonitor(window);
+            //const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+            //// Create a window
+            ////GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "My Window", monitor, NULL);
+
+            //// Make the window fullscreen
+            ////int count;
+            ////GLFWmonitor** monitors = glfwGetMonitors(&count);
+            //glfwSetWindowMonitor(window, NULL, 0, 0, mode->width, mode->height, mode->refreshRate);
+
+            // find the second monitor (index 1) by checking its position
+            for (int i = 0; i < monitor_count; i++) {
+                const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]);
+                int monitor_x, monitor_y;
+                glfwGetMonitorPos(monitors[i], &monitor_x, &monitor_y);
+                if (monitor_x != 0 || monitor_y != 0) {
+                    monitorNumber = i;
+                    monitor = monitors[i];
+                    break;
+                }
+            }
+
+            // make the window full screen on the second monitor
+            if (monitor) {
+                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+            }
+
+        }
+        else if (key == GLFW_KEY_M) {
+			monitors = glfwGetMonitors(&monitor_count);
+            monitorNumber++;
+            monitor = monitors[monitorNumber % monitor_count];
+            if (monitor) {
+                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
             }
         }
-
-        // make the window full screen on the second monitor
-        if (monitor)
-        {
-            const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-            glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        else if (key == GLFW_KEY_H) {
+            computeHomography();
         }
     }
-
-    if (key == GLFW_KEY_M && action == GLFW_RELEASE)
-    {
-        monitors = glfwGetMonitors(&monitor_count);
-        monitorNumber++;
-        monitor = monitors[monitorNumber % monitor_count];
-        if (monitor)
-        {
-            const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-            glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+    else if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+        // Listen for arrow key input to move selected square
+        if (key == GLFW_KEY_LEFT) {
+            squarePositions[selectedSquare][0] -= 0.05f;
+        }
+        //@rony: fix the stuff below
+        else if (key == GLFW_KEY_RIGHT) {
+            squarePositions[selectedSquare][0] += 0.05f;
+        }
+        else if (key == GLFW_KEY_UP) {
+            squarePositions[selectedSquare][1] += 0.05f;
+        }
+        else if (key == GLFW_KEY_DOWN) {
+            squarePositions[selectedSquare][1] -= 0.05f;
         }
     }
 }
 
-void drawRect(float x, float y, float width, float height)
-{
+void drawTarget(float x, float y) {
     glBegin(GL_QUADS);
 
-    glTexCoord2f(0.0f, 0.0f);
     glVertex2f(x, y);
 
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex2f(x + width, y);
+    glVertex2f(x+0.1f, y);
 
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex2f(x + width, y + height);
+    glVertex2f(x+0.1f, y+0.1f);
 
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex2f(x, y + height);
+    glVertex2f(x, y+0.1f);
     glEnd();
 }
 
+void drawRect(vector<cv::Point2f> corners) {
+    glBegin(GL_QUADS);
 
-unsigned int leftRotate(unsigned int number, unsigned int rotation) {
-    rotation = rotation % (sizeof(unsigned int) * 8);  // Ensure rotation is within valid range
+    //glTexCoord2f(x, y);
+    glTexCoord2f(0.0f, 0.0f);
+    glVertex2f(corners[0].x, corners[0].y);
 
-    return (number << rotation) | (number >> (INT_BITS - rotation));
+    //glTexCoord2f(x+texWidth, y);
+    glTexCoord2f(1.0f, 0.0f);
+    glVertex2f(corners[1].x, corners[1].y);
+    // glVertex2f(x+width, y);
+
+    //glTexCoord2f(x+texWidth, y+texHeight);
+    glTexCoord2f(1.0f, 1.0f);
+    glVertex2f(corners[2].x, corners[2].y);
+    // glVertex2f(x+width, y+height);
+
+    //glTexCoord2f(x, y+texHeight);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex2f(corners[3].x, corners[3].y);
+    // glVertex2f(x, y+height);
+    glEnd();
 }
 
-
-void fillCoordinates()
-{
-    for (int i = 0; i < ROWS; i++)
-    {
-
-        for (int j = 0; j < COLUMNS; j++)
-        {
-
-            // indices being converted into the coordinate system
-
-            int x = (j) * scalingFactor; // correction to be coherent with rebecca's coordinate system.
-            int y = (6 - i) * scalingFactor;
-
-            // check if the octagon is in the path array, if it is fill the octagon spot with truth,
-            //  else skip the iteration and save time and memory
-            int octagonNumber = (i * 6) + (j) + i;
-            ROS_ERROR("octagon Number %d", octagonNumber);
-            show_octagon[i][j] = false;
-            std::vector<int>::iterator it;
-            it = std::find(array1.begin(), array1.end(), octagonNumber);
-            int wallIndex;
-            if (it != end(array1))
-            {
-                wallIndex = it - array1.begin();
-                show_octagon[i][j] = true;
-            }
-            else
-                continue;
-
-            // gonna check for which walls are up and set the truth value for them
+void drawWalls() {
 
 
-            unsigned int leftRotatedNumber = leftRotate(array2[wallIndex],(unsigned int) 3);
-
-            std::bitset<8> binary(leftRotatedNumber);
-            std::string binaryString = binary.to_string();
-
+    for (int i=0; i<7; i++) {
+        for (int j=0; j<7; j++) {
+            glBindTexture(GL_TEXTURE_2D, fboTexture);
+            vector<cv::Point2f> c = wallCorners;        
             
+            for (auto it = c.begin(); it != c.end(); it++) {
+                cv::Point2f p = *it;
 
+                p.x += i*wallSep; 
+                p.y += j*wallSep; 
 
-            ROS_ERROR("WallIndex Number %d", wallIndex);
-            ROS_ERROR("array Number %d", array2[wallIndex]);
-            ROS_ERROR("Binary Number ----- ");
-            ROS_ERROR(binaryString.c_str());
-            for (int k = binary.size() - 1; k >= 0; --k)
-            {
-                bool bit = binary[k];
-                show_wall[i][j][k] = false;
+                float data[] = {p.x,p.y,1}; //apparently that's how it is
 
-                if (bit)
-                {
+                cv::Mat ptMat(3, 1, CV_32F,data);
+                cv::Mat ptMat2(3, 1, CV_32F,data);
 
-                    ROS_ERROR("boi is tru %d", k);
-                    show_wall[i][j][k] = true;
+                H.convertTo(H, ptMat.type());
 
-                    float angle1 = (k + 0.5) * 2 * M_PI / 8;
-                    float angle2 = (k + 1.5) * 2 * M_PI / 8;
+                // warpPerspective(ptMat2, ptMat, H, ptMat.size());
 
-                    // z and a few other variables should be initialized at the very top
+                ptMat = H * ptMat;
+                
+                ptMat /= ptMat.at<float>(2);
 
-                    wall_vertices[i][j][k][0][0] = (float)x + OCTAGON_SIZE * cos(angle1);
-                    wall_vertices[i][j][k][0][1] = (float)y + OCTAGON_SIZE * sin(angle1);
-                    wall_vertices[i][j][k][0][2] = (float)Z;
+                cerr << "\n" << ptMat;
 
-                    wall_vertices[i][j][k][1][0] = (float)x + OCTAGON_SIZE * cos(angle2);
-                    wall_vertices[i][j][k][1][1] = (float)y + OCTAGON_SIZE * sin(angle2);
-                    wall_vertices[i][j][k][1][2] = (float)Z;
-
-                    wall_vertices[i][j][k][2][0] = (float)x + OCTAGON_SIZE * cos(angle2);
-                    wall_vertices[i][j][k][2][1] = (float)y + OCTAGON_SIZE * sin(angle2);
-                    wall_vertices[i][j][k][2][2] = (float)Z + WALL_HEIGHT;
-
-                    wall_vertices[i][j][k][3][0] = (float)x + OCTAGON_SIZE * cos(angle1);
-                    wall_vertices[i][j][k][3][1] = (float)y + OCTAGON_SIZE * sin(angle1);
-                    wall_vertices[i][j][k][3][2] = (float)Z + WALL_HEIGHT;
-                }
-                else
-                    continue;
+                it->x = ptMat.at<float>(0,0);
+                it->y = ptMat.at<float>(0,1);
             }
+
+            drawRect(c);
         }
     }
 }
 
-int main(int argc, char **argv)
-{
-
-    int startValue = 0;
-
-    // for (int i = 0; i < 20  ; ++i)
-    // {
-    //     array1.push_back(startValue + i);
-    //     array2.push_back(255);
-    // }
-
-    fillCoordinates();
+int main(int argc, char** argv) {
 
     ros::init(argc, argv, "Projection", ros::init_options::AnonymousName);
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
-    ROS_ERROR("main ran");
+	ROS_ERROR("main ran");
+
+    //ILuint image;
+    //ilInit();
+    //iluInit();
+    //ilutInit();
+
+    //ilInit();
+
+    //ilutRenderer(ILUT_OPENGL);
 
     ILuint ImgId = 0;
     ilGenImages(1, &ImgId);
     ilBindImage(ImgId);
+
 
     string packagePath = ros::package::getPath("projection_calibration");
 
@@ -572,15 +300,16 @@ int main(int argc, char **argv)
     ROS_ERROR("%d", texWidth);
     ROS_ERROR("%d", texHeight);
 
+    //ILubyte* imageData = ilGetData();
+
     glfwSetErrorCallback(error_callback);
 
-    if (!glfwInit())
-    {
+    if (!glfwInit()) {
         ROS_ERROR("glfw init issue");
         return -1;
     }
     // Create a window with a 4K resolution (3840x2160)
-    window = glfwCreateWindow(winWidth, winHeight, "GLFW 4K Window", NULL, NULL);
+    window = glfwCreateWindow(winWidth,winHeight, "GLFW 4K Window", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -589,14 +318,20 @@ int main(int argc, char **argv)
 
     // Set the window as the current OpenGL context
     glfwMakeContextCurrent(window);
-    ROS_ERROR("window ran");
+	ROS_ERROR("window ran");
 
     gladLoadGL();
     glfwSwapInterval(1);
     glfwSetKeyCallback(window, keyCallback);
-    // GLuint textureID;
+    GLuint textureID;
     // Set the window resize callback
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
+
+    //glMatrixMode(GL_MODELVIEW);
+    //glLoadIdentity();
+    //glTranslatef(0, 0, 0);
+
 
     // Create an FBO and attach the texture to it
     glGenFramebuffers(1, &fbo);
@@ -611,51 +346,50 @@ int main(int argc, char **argv)
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+
+
+
     while (!glfwWindowShouldClose(window))
     {
 
-        // for keyboard delta-time
-        float currentFrame = static_cast<float>(glfwGetTime());
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+        //glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        ////glViewport(0, 0, winWidth, winHeight);
 
-        processInput(window);
+        //// Clear the FBO
+        //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        //glClear(GL_COLOR_BUFFER_BIT);
 
-        glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
 
-        // glFrustum(-2, 2, -2, 2, 1, 10);
-        glFrustum(frustumLeft, frustumRight, frustumBottom, frustumTop, frustumNearVal, frustumFarVal);
-        // glFrustum(-50,50,-50,1,1,50);
+  //      // Draw squares with updated positions
+        glClear(GL_COLOR_BUFFER_BIT);
+		//glGenTextures(1, &textureID);
+		//glBindTexture(GL_TEXTURE_2D, textureID);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-        glLoadMatrixf(glm::value_ptr(camera.GetViewMatrix()));
-
-        glTranslatef(0, 0, -1);
-
-        //// Load image data into texture
+		//// Load image data into texture
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH),
-                     ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, ilGetData());
+            ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGB,
+            GL_UNSIGNED_BYTE, ilGetData());
 
-        // Enable texture mapping
-        glEnable(GL_TEXTURE_2D);
+		// Enable texture mapping
+		glEnable(GL_TEXTURE_2D);
 
-        drawMaze();
+        drawWalls();
 
-        // for (int i = 0; i < 4; i++) {
-        //     glBindTexture(GL_TEXTURE_2D, fboTexture);
-        //     drawRect(squarePositions[i][0], squarePositions[i][1], 0.1f, 0.1f);
-        // }
-
+        for (int i=0; i<4; i++) {
+            drawTarget(squarePositions[i][0], squarePositions[i][1]);
+        }
+        
         // Swap the buffers
         glfwSwapBuffers(window);
         glfwPollEvents();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
         // Exit the loop when the window is closed or escape key is pressed
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwWindowShouldClose(window))
