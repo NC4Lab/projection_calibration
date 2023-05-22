@@ -82,9 +82,16 @@ void computeHomography() {
     vector<cv::Point2f> targetCorners;
     vector<cv::Point2f> imageCorners;
 
-    for (int i=0; i<4; i++) {
-        targetCorners.push_back(cv::Point2f(squarePositions[i][0], squarePositions[i][1]));
-    }
+    // for (int i=0; i<4; i++) {
+    //     targetCorners.push_back(cv::Point2f(squarePositions[i][0], squarePositions[i][1]));
+
+    // }
+
+    //hard coding the specific corners for each of the squares. 
+    targetCorners.push_back(cv::Point2f(squarePositions[0][0], squarePositions[0][1] + 0.1f )); 
+    targetCorners.push_back(cv::Point2f(squarePositions[1][0] + 0.1f - wallWidth , squarePositions[1][1] + 0.1f )); 
+    targetCorners.push_back(cv::Point2f(squarePositions[2][0] + 0.1f - wallWidth, squarePositions[2][1] + wallWidth)); 
+    targetCorners.push_back(cv::Point2f(squarePositions[3][0] , squarePositions[3][1] + wallWidth)); 
 
     imageCorners = createRectPoints(0.0f, 0.0f, 6.0*wallSep, 6.0*wallSep);
     
@@ -187,13 +194,14 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 void drawTarget(float x, float y) {
     glBegin(GL_QUADS);
 
+//in clockwise direction, starting from left bottom
     glVertex2f(x, y);
-
-    glVertex2f(x+0.1f, y);
+    glVertex2f(x, y+0.1f);
 
     glVertex2f(x+0.1f, y+0.1f);
+    glVertex2f(x+0.1f, y);
 
-    glVertex2f(x, y+0.1f);
+
     glEnd();
 }
 
@@ -248,7 +256,7 @@ void drawWalls() {
                 
                 ptMat /= ptMat.at<float>(2);
 
-                cerr << "\n" << ptMat;
+                // cerr << "\n" << ptMat;
 
                 it->x = ptMat.at<float>(0,0);
                 it->y = ptMat.at<float>(0,1);
