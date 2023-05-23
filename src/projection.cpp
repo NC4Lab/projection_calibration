@@ -10,7 +10,7 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 
-vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height)
+vector<cv::Point2f> createRectPoints(float x0, float y0, float height, float width)
 {
     vector<cv::Point2f> rectPoints;
     rectPoints.push_back(cv::Point2f(x0, y0));
@@ -22,18 +22,24 @@ vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float heig
 }
 
 float wallWidth = 0.02f;
+float wallHeight = 0.02f;
 float wallSep = 0.05f;
 string changeMode = "pos";
 float shearAmount = 0.0f; // Calculate the shear amount based on your requirements
-vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallWidth);
+vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight);
 
-// x,y,width,height
-float squarePositions[4][4] = {
-    {-0.1f, 0.1f, 0.1f, 0.1f}, // top-left square
-    {0.1f, 0.1f, 0.1f, 0.1f},  // top-right square
-    {0.1f, -0.1f, 0.1f, 0.1f}, // bottom-right square
-    {-0.1f, -0.1f, 0.1f, 0.1f} // bottom-left square
+// x,y,width,height, shear
+float squarePositions[4][5] = {
+    {-0.8f, 0.8f, 0.1f, 0.1f, 0.0f}, // top-left square
+    {0.8f, 0.8f, 0.1f, 0.1f, 0.0f},  // top-right square
+    {0.8f, -0.8f, 0.1f, 0.1f, 0.0f}, // bottom-right square
+    {-0.8f, -0.8f, 0.1f, 0.1f, 0.0f} // bottom-left square
 };
+
+float shearValues[7][7];
+float sizeValues[7][7];
+
+float configurationValues[3][3][3];
 
 cv::Mat H = cv::Mat::eye(3, 3, CV_32F);
 
@@ -95,16 +101,19 @@ void computeHomography()
     // }
 
     // hard coding the specific corners for each of the squares.
-    targetCorners.push_back(cv::Point2f(squarePositions[0][0], squarePositions[0][1] + squarePositions[0][3]));
-    targetCorners.push_back(cv::Point2f(squarePositions[1][0] + squarePositions[1][2] - wallWidth, squarePositions[1][1] + squarePositions[1][3]));
-    targetCorners.push_back(cv::Point2f(squarePositions[2][0] + squarePositions[2][2] - wallWidth, squarePositions[2][1] + wallWidth));
-    targetCorners.push_back(cv::Point2f(squarePositions[3][0], squarePositions[3][1] + wallWidth));
-
+    // targetCorners.push_back(cv::Point2f(squarePositions[0][0], squarePositions[0][1] + squarePositions[0][3]));
+    // targetCorners.push_back(cv::Point2f(squarePositions[1][0] + squarePositions[1][2] - wallWidth, squarePositions[1][1] + squarePositions[1][3]));
+    // targetCorners.push_back(cv::Point2f(squarePositions[2][0] + squarePositions[2][2] - wallWidth, squarePositions[2][1] + wallWidth));
+    // targetCorners.push_back(cv::Point2f(squarePositions[3][0], squarePositions[3][1] + wallWidth));
+    targetCorners.push_back(cv::Point2f(squarePositions[0][0], squarePositions[0][1]));
+    targetCorners.push_back(cv::Point2f(squarePositions[1][0], squarePositions[1][1]));
+    targetCorners.push_back(cv::Point2f(squarePositions[2][0], squarePositions[2][1]));
+    targetCorners.push_back(cv::Point2f(squarePositions[3][0], squarePositions[3][1]));
     imageCorners = createRectPoints(0.0f, 0.0f, 6.0 * wallSep, 6.0 * wallSep);
 
-    cerr << "target corners " << targetCorners << "\n"
-         << "square poisitons " << squarePositions << "\n"
-         << "imageCorners " << imageCorners << "\n";
+    // cerr << "target corners " << targetCorners << "\n"
+    //      << "square poisitons " << squarePositions << "\n"
+    //      << "imageCorners " << imageCorners << "\n";
 
     H = findHomography(imageCorners, targetCorners);
     // H = findHomography(targetCorners, imageCorners);
@@ -152,10 +161,26 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         {
             changeMode = "dimensions";
         }
-         else if (key == GLFW_KEY_S)
+        else if (key == GLFW_KEY_S)
         {
             changeMode = "shear";
         }
+        // else if (key == GLFW_KEY_R)
+        // {
+        //     cerr<< "pressed R";
+        //     float squarePositions[4][5] = {
+        //         {-0.8f, 0.8f, 0.1f, 0.1f, 0.0f}, // top-left square
+        //         {0.8f, 0.8f, 0.1f, 0.1f, 0.0f},  // top-right square
+        //         {0.8f, -0.8f, 0.1f, 0.1f, 0.0f}, // bottom-right square
+        //         {-0.8f, -0.8f, 0.1f, 0.1f, 0.0f} // bottom-left square
+        //     };
+        //             drawWalls();
+
+        // for (int i = 0; i < 4; i++)
+        // {
+        //     drawTarget(squarePositions[i][0], squarePositions[i][1], squarePositions[i][2], squarePositions[i][3]);
+        // }
+        // }
         else if (key == GLFW_KEY_F)
         {
             monitors = glfwGetMonitors(&monitor_count);
@@ -202,10 +227,6 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
                 glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
             }
         }
-        else if (key == GLFW_KEY_H)
-        {
-            computeHomography();
-        }
     }
     else if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
@@ -234,36 +255,39 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
         if (changeMode == "dimensions")
         {
-            if (key == GLFW_KEY_LEFT)
-            {
-                squarePositions[selectedSquare][2] -= 0.05f;
-            }
-            else if (key == GLFW_KEY_RIGHT)
-            {
-                squarePositions[selectedSquare][2] += 0.05f;
-            }
-            else if (key == GLFW_KEY_UP)
-            {
-                squarePositions[selectedSquare][3] += 0.05f;
-            }
-            else if (key == GLFW_KEY_DOWN)
-            {
-                squarePositions[selectedSquare][3] -= 0.05f;
-            }
-        }
-
-        if (changeMode == "shear"){
+            // if (key == GLFW_KEY_LEFT)
+            // {
+            //     squarePositions[selectedSquare][2] -= 0.05f;
+            // }
+            // else if (key == GLFW_KEY_RIGHT)
+            // {
+            //     squarePositions[selectedSquare][2] += 0.05f;
+            // }
+            // else
             if (key == GLFW_KEY_UP)
             {
-                shearAmount += 0.05f;
+                wallHeight += 0.01f;
             }
             else if (key == GLFW_KEY_DOWN)
             {
-                shearAmount -= 0.05f;
+                wallHeight -= 0.01f;
             }
         }
 
+        if (changeMode == "shear")
+        {
+            if (key == GLFW_KEY_UP)
+            {
+                squarePositions[selectedSquare][4] += 0.05f;
+            }
+            else if (key == GLFW_KEY_DOWN)
+            {
+                squarePositions[selectedSquare][4] -= 0.05f;
+            }
+        }
     }
+
+    computeHomography();
 }
 
 void drawTarget(float x, float y, float targetWidth, float targetHeight)
@@ -307,13 +331,16 @@ void drawRect(vector<cv::Point2f> corners)
 
 void drawWalls()
 {
+    float shear1 = squarePositions[0][4];
+    float shear2 = squarePositions[1][4];
+    float shear4 = squarePositions[3][4];
 
-    for (int i = 0; i < 7; i++)
+    for (float i = 0; i < 7; i++)
     {
-        for (int j = 0; j < 7; j++)
+        for (float j = 0; j < 7; j++)
         {
             glBindTexture(GL_TEXTURE_2D, fboTexture);
-            vector<cv::Point2f> c = wallCorners;
+            vector<cv::Point2f> c = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight);
 
             for (auto it = c.begin(); it != c.end(); it++)
             {
@@ -342,12 +369,17 @@ void drawWalls()
                 it->y = ptMat.at<float>(0, 1);
             }
 
-        for (auto it = c.begin(); it != c.end(); it++) {
-            cv::Point2f p = *it;
-            p.x += shearAmount * p.y;
-            it->x = p.x;
-            it->y = p.y;
-        }
+            for (auto it = c.begin(); it != c.end(); it++)
+            {
+                cv::Point2f p = *it;
+                // shearAmount = ((6 - i)/6.0) * shear1 +  ((6-j)/6)*(shear2 - shear1 * ((6 - i)/6.0)) + ( j / 6 ) * (shear4 - shear1 * (( 6- i )/6.0));
+                shearAmount = shear1 + (i/6.0) * (shear2 - shear1) + (j/6) * (shear4 - shear1);
+                // shearAmount = shearAmount + shear2 + (1 / 6.0) * (shear1 - shear2) + ((6 - j) / 6) * (shear4 - shear2);
+                // shearAmount = shearAmount + shear4 + ((6-i)/6.0) * (shear2 - shear4) + (j/6) * (shear1 - shear4);
+                p.x += shearAmount * p.y;
+                it->x = p.x;
+                it->y = p.y;
+            }
 
             drawRect(c);
         }
