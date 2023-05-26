@@ -144,6 +144,7 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   $ENV{IL_INCLUDE_DIR}
   ${PROJECTION_DIR}/src/glm
+  ${PROJECTION_DIR}/src/pugixml
  # "C:/Program Files (x86)/IL/include"
  # ${PROJECTION_DIR}/dll
 
@@ -185,8 +186,12 @@ add_executable(${PROJECT_NAME}_node
 	src/glad.c
 	src/glad/glad.h
 	src/glm/glm.hpp
+  # src/Eigen/Eigen
+  src/Eigen/Dense
 	src/learnopengl/camera.h
 	src/learnopengl/shader_m.h
+  src/pugixml/pugixml.cpp
+  src/pugixml/pugixml.hpp
 	)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)

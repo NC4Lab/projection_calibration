@@ -66,6 +66,10 @@ using namespace std;
 #include "../nanosvg-master/src/nanosvgrast.h"
 //#include <GL/gl.h>
 
+// typedef XmlRpc::XmlRpcValue XmlRpcValue;
+// typedef std::vector<XmlRpc::XmlRpcValue> Row;
+// typedef std::vector<std::vector<XmlRpc::XmlRpcValue>> XmlRpcArray;
+
 float r = 140.0f / 255.0f;
 float g = 72.0f / 255.0f;
 float b = 159.0f / 255.0f;

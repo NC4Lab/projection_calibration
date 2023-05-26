@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <ros/package.h>
+#include <XmlRpcValue.h>
 #include "projection.h"
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core/types.hpp>
@@ -9,31 +10,52 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
+#include "pugixml.hpp"
 
-vector<cv::Point2f> createRectPoints(float x0, float y0, float height, float width)
+// #include <Eigen/Dense>
+// #include "Eigen/Dense"
+
+vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height, float shearAmount)
 {
     vector<cv::Point2f> rectPoints;
-    rectPoints.push_back(cv::Point2f(x0, y0));
-    rectPoints.push_back(cv::Point2f(x0, y0 + height));
-    rectPoints.push_back(cv::Point2f(x0 + width, y0 + height));
+    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount, y0 + height));
+    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount + width, y0 + height));
     rectPoints.push_back(cv::Point2f(x0 + width, y0));
+    rectPoints.push_back(cv::Point2f(x0, y0));
 
     return rectPoints;
 }
+
+int imageNumber;
 
 float wallWidth = 0.02f;
 float wallHeight = 0.02f;
 float wallSep = 0.05f;
 string changeMode = "pos";
 float shearAmount = 0.0f; // Calculate the shear amount based on your requirements
-vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight);
+vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight,0);
+string packagePath = ros::package::getPath("projection_calibration");
+string configPath;
+string windowName;
+
+// string texFileName = packagePath + "/src/tj.bmp";
+
+// List of image file paths
+std::vector<std::string> imagePaths = {
+    packagePath + "/src/tj.bmp",
+    packagePath + "/src/mmCarribean.png",
+    // Add more image file paths as needed
+};
+
+// Container to hold the loaded images
+std::vector<ILuint> imageIDs;
 
 // x,y,width,height, shear
 float squarePositions[4][5] = {
-    {-0.8f, 0.8f, 0.1f, 0.1f, 0.0f}, // top-left square
-    {0.8f, 0.8f, 0.1f, 0.1f, 0.0f},  // top-right square
-    {0.8f, -0.8f, 0.1f, 0.1f, 0.0f}, // bottom-right square
-    {-0.8f, -0.8f, 0.1f, 0.1f, 0.0f} // bottom-left square
+    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
+    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
+    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
+    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
 };
 
 float shearValues[7][7];
@@ -78,55 +100,129 @@ static void error_callback(int error, const char *description)
 
 void saveCoordinates()
 {
-    for (int i = 0; i < 4; i++)
-    {
-        int pixelX = (int)((squarePositions[i][0] + 1.0f) / 2.0f * winWidth);
-        int pixelY = (int)((1.0f - squarePositions[i][1]) / 2.0f * winHeight);
-        ROS_ERROR("Square %d position: (%d, %d)\n", i, pixelX, pixelY);
-    }
-    //       int pixelWidth = (int)(0.1f * winWidth);
-    //       int pixelHeight = (int)(0.1f * winHeight);
 
-    // ROS_ERROR("Pixel dimensions, width is: %d and height is %d", pixelWidth, pixelHeight);
+
+    pugi::xml_document doc;
+
+    // Create the root element
+    pugi::xml_node root = doc.append_child("config");
+
+    pugi::xml_node arrayNode = root.append_child("squarePositions");
+
+    // Iterate over the rows of the 2D array
+    for (const auto& row : squarePositions) {
+        // Create a row element
+        pugi::xml_node rowNode = arrayNode.append_child("Row");
+
+        // Iterate over the elements in the row
+        for (const auto& value : row) {
+            // Create a cell element
+            pugi::xml_node cellNode = rowNode.append_child("Cell");
+            cellNode.append_child(pugi::node_pcdata).set_value(std::to_string(value).c_str());
+        }
+    }
+
+
+
+    float array2[3][3];
+
+    // Copy data from cv::Mat to the 2D array
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            array2[i][j] = H.at<float>(i, j);
+        }
+    }
+
+    pugi::xml_node arrayNode2 = root.append_child("H");
+
+    // Iterate over the rows of the 2D array
+    for (const auto& row : array2) {
+        // Create a row element
+        pugi::xml_node rowNode = arrayNode2.append_child("Row");
+
+        // Iterate over the elements in the row
+        for (const auto& value : row) {
+            // Create a cell element
+            pugi::xml_node cellNode = rowNode.append_child("Cell");
+            cellNode.append_child(pugi::node_pcdata).set_value(std::to_string(value).c_str());
+        }
+    }
+
+
+    // Save the XML document to a file
+    if (doc.save_file(configPath)) {
+        std::cout << "XML file saved successfully." << std::endl;
+    } else {
+        std::cout << "Failed to save XML file." << std::endl;
+    }
+
 }
 
 void computeHomography()
 {
     vector<cv::Point2f> targetCorners;
     vector<cv::Point2f> imageCorners;
-
-    // for (int i=0; i<4; i++) {
-    //     targetCorners.push_back(cv::Point2f(squarePositions[i][0], squarePositions[i][1]));
-
-    // }
-
     // hard coding the specific corners for each of the squares.
-    // targetCorners.push_back(cv::Point2f(squarePositions[0][0], squarePositions[0][1] + squarePositions[0][3]));
-    // targetCorners.push_back(cv::Point2f(squarePositions[1][0] + squarePositions[1][2] - wallWidth, squarePositions[1][1] + squarePositions[1][3]));
-    // targetCorners.push_back(cv::Point2f(squarePositions[2][0] + squarePositions[2][2] - wallWidth, squarePositions[2][1] + wallWidth));
-    // targetCorners.push_back(cv::Point2f(squarePositions[3][0], squarePositions[3][1] + wallWidth));
     targetCorners.push_back(cv::Point2f(squarePositions[0][0], squarePositions[0][1]));
     targetCorners.push_back(cv::Point2f(squarePositions[1][0], squarePositions[1][1]));
     targetCorners.push_back(cv::Point2f(squarePositions[2][0], squarePositions[2][1]));
     targetCorners.push_back(cv::Point2f(squarePositions[3][0], squarePositions[3][1]));
-    imageCorners = createRectPoints(0.0f, 0.0f, 6.0 * wallSep, 6.0 * wallSep);
-
-    // cerr << "target corners " << targetCorners << "\n"
-    //      << "square poisitons " << squarePositions << "\n"
-    //      << "imageCorners " << imageCorners << "\n";
+    imageCorners = createRectPoints(0.0f, 0.0f, 6.0 * wallSep, 6.0 * wallSep, 0);
 
     H = findHomography(imageCorners, targetCorners);
     // H = findHomography(targetCorners, imageCorners);
 
     // cerr << H;
 
-    // float value = ptMat.at<float>(0, 2);
-    // ROS_ERROR("The value is: %f", value);
+
+}
+void loadCoordinates() {
+    pugi::xml_document doc;
+    if (!doc.load_file(configPath)) {
+        std::cout << "Failed to load XML file." << std::endl;
+        return ;
+    }
+
+    // Retrieve squarePositions
+    std::vector<std::vector<float>> squarePositions2;
+    pugi::xml_node squarePositionsNode = doc.child("config").child("squarePositions");
+    for (pugi::xml_node rowNode = squarePositionsNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row")) {
+        std::vector<float> row;
+        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell")) {
+            float value = std::stof(cellNode.child_value());
+            row.push_back(value);
+        }
+        squarePositions2.push_back(row);
+    }
+
+    for (int i; i < 4; i++){
+        for(int j; j<5; j++){
+            squarePositions[i][j] = squarePositions2[i][j];
+        }
+    }
+
+
+
+
+    // Retrieve H
+    std::vector<std::vector<float>> H2;
+    pugi::xml_node HNode = doc.child("config").child("H");
+    for (pugi::xml_node rowNode = HNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row")) {
+        std::vector<float> row;
+        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell")) {
+            float value = std::stof(cellNode.child_value());
+            row.push_back(value);
+        }
+        H2.push_back(row);
+    }
+    for (int i; i < 3; i++){
+        for(int j; j<3; j++){
+            H.at<float>(i,j) = H2[i][j];
+        }
+    }
+
 }
 
-// void changeCameraMode(int dir) {
-//     if changeMod
-// }
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
@@ -157,6 +253,12 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         {
             changeMode = "pos";
         }
+        else if (key == GLFW_KEY_C){
+            imageNumber = 1;
+        }
+        else if (key == GLFW_KEY_T){
+            imageNumber = 0;
+        }
         else if (key == GLFW_KEY_D)
         {
             changeMode = "dimensions";
@@ -165,22 +267,11 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         {
             changeMode = "shear";
         }
-        // else if (key == GLFW_KEY_R)
-        // {
-        //     cerr<< "pressed R";
-        //     float squarePositions[4][5] = {
-        //         {-0.8f, 0.8f, 0.1f, 0.1f, 0.0f}, // top-left square
-        //         {0.8f, 0.8f, 0.1f, 0.1f, 0.0f},  // top-right square
-        //         {0.8f, -0.8f, 0.1f, 0.1f, 0.0f}, // bottom-right square
-        //         {-0.8f, -0.8f, 0.1f, 0.1f, 0.0f} // bottom-left square
-        //     };
-        //             drawWalls();
 
-        // for (int i = 0; i < 4; i++)
-        // {
-        //     drawTarget(squarePositions[i][0], squarePositions[i][1], squarePositions[i][2], squarePositions[i][3]);
-        // }
-        // }
+        else if (key == GLFW_KEY_L){
+            loadCoordinates();
+        }
+
         else if (key == GLFW_KEY_F)
         {
             monitors = glfwGetMonitors(&monitor_count);
@@ -224,6 +315,9 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
             if (monitor)
             {
                 const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+                // glfwSetWindowAttrib(window, GLFW_FOCUS_ON_SHOW, GL_TRUE);
+                glfwSetWindowAttrib(window, GLFW_RESIZABLE,	GLFW_TRUE);
+                glfwSetWindowAttrib(window, GLFW_CONTEXT_RELEASE_BEHAVIOR,	GL_NONE);
                 glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
             }
         }
@@ -255,22 +349,13 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
         if (changeMode == "dimensions")
         {
-            // if (key == GLFW_KEY_LEFT)
-            // {
-            //     squarePositions[selectedSquare][2] -= 0.05f;
-            // }
-            // else if (key == GLFW_KEY_RIGHT)
-            // {
-            //     squarePositions[selectedSquare][2] += 0.05f;
-            // }
-            // else
             if (key == GLFW_KEY_UP)
             {
-                wallHeight += 0.01f;
+                squarePositions[selectedSquare][3] += 0.001f;
             }
             else if (key == GLFW_KEY_DOWN)
             {
-                wallHeight -= 0.01f;
+                squarePositions[selectedSquare][3] -= 0.001f;
             }
         }
 
@@ -304,43 +389,60 @@ void drawTarget(float x, float y, float targetWidth, float targetHeight)
     glEnd();
 }
 
-void drawRect(vector<cv::Point2f> corners)
+void drawRect(vector<cv::Point2f> corners, int imageNumber)
 {
+
     glBegin(GL_QUADS);
 
     // glTexCoord2f(x, y);
-    glTexCoord2f(0.0f, 0.0f);
+    glTexCoord2f(0.0f, 1.0f);
     glVertex2f(corners[0].x, corners[0].y);
 
     // glTexCoord2f(x+texWidth, y);
-    glTexCoord2f(1.0f, 0.0f);
+    glTexCoord2f(1.0f, 1.0f);
     glVertex2f(corners[1].x, corners[1].y);
     // glVertex2f(x+width, y);
 
     // glTexCoord2f(x+texWidth, y+texHeight);
-    glTexCoord2f(1.0f, 1.0f);
+    glTexCoord2f(1.0f, 0.0f);
     glVertex2f(corners[2].x, corners[2].y);
     // glVertex2f(x+width, y+height);
 
     // glTexCoord2f(x, y+texHeight);
-    glTexCoord2f(0.0f, 1.0f);
+    glTexCoord2f(0.0f, 0.0f);
     glVertex2f(corners[3].x, corners[3].y);
     // glVertex2f(x, y+height);
     glEnd();
 }
 
+
 void drawWalls()
 {
-    float shear1 = squarePositions[0][4];
-    float shear2 = squarePositions[1][4];
-    float shear4 = squarePositions[3][4];
 
+    float shear4 = squarePositions[3][4];
+    float shear3 = squarePositions[2][4];
+    float shear1 = squarePositions[0][4];
+
+    float height4 = squarePositions[3][3];
+    float height3 = squarePositions[2][3];
+    float height1 = squarePositions[0][3];
+
+    // Enable texture mapping
+    glEnable(GL_TEXTURE_2D);
     for (float i = 0; i < 7; i++)
     {
+        ilBindImage(imageIDs[imageNumber]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH),
+                     ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGB,
+                     GL_UNSIGNED_BYTE, ilGetData());
+        glEnable(GL_TEXTURE_2D);
         for (float j = 0; j < 7; j++)
         {
             glBindTexture(GL_TEXTURE_2D, fboTexture);
-            vector<cv::Point2f> c = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight);
+
+            shearAmount = shear4 + (i / 6.0) * (shear3 - shear4) + (j / 6) * (shear1 - shear4);
+            float heightAmount = height4 + (i / 6.0) * (height3 - height4) + (j / 6) * (height1 - height4);
+            vector<cv::Point2f> c = createRectPoints(0.0f, 0.0f, wallWidth, heightAmount, shearAmount);
 
             for (auto it = c.begin(); it != c.end(); it++)
             {
@@ -369,22 +471,12 @@ void drawWalls()
                 it->y = ptMat.at<float>(0, 1);
             }
 
-            for (auto it = c.begin(); it != c.end(); it++)
-            {
-                cv::Point2f p = *it;
-                // shearAmount = ((6 - i)/6.0) * shear1 +  ((6-j)/6)*(shear2 - shear1 * ((6 - i)/6.0)) + ( j / 6 ) * (shear4 - shear1 * (( 6- i )/6.0));
-                shearAmount = shear1 + (i/6.0) * (shear2 - shear1) + (j/6) * (shear4 - shear1);
-                // shearAmount = shearAmount + shear2 + (1 / 6.0) * (shear1 - shear2) + ((6 - j) / 6) * (shear4 - shear2);
-                // shearAmount = shearAmount + shear4 + ((6-i)/6.0) * (shear2 - shear4) + (j/6) * (shear1 - shear4);
-                p.x += shearAmount * p.y;
-                it->x = p.x;
-                it->y = p.y;
-            }
-
-            drawRect(c);
+            drawRect(c, i);
         }
     }
 }
+
+
 
 int main(int argc, char **argv)
 {
@@ -394,40 +486,54 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     ROS_ERROR("main ran");
 
-    // ILuint image;
-    // ilInit();
-    // iluInit();
-    // ilutInit();
+    nh.getParam("configPath", configPath);
+    nh.getParam("windowName", windowName);
 
-    // ilInit();
+    ROS_ERROR("config path is:" );
+    ROS_ERROR(configPath.c_str());
+   
+    ilInit();
 
-    // ilutRenderer(ILUT_OPENGL);
+    for (const std::string &imagePath : imagePaths)
+    {
+        // Generate a new DevIL image ID
+        ILuint imageID;
+        ilGenImages(1, &imageID);
+        ilBindImage(imageID);
 
-    ILuint ImgId = 0;
-    ilGenImages(1, &ImgId);
-    ilBindImage(ImgId);
+        // Load the image file
+        ILboolean success = ilLoadImage(imagePath.c_str());
+        if (success == IL_TRUE)
+        {
+            // Image loaded successfully
+            imageIDs.push_back(imageID);
+            ROS_ERROR(imagePath.c_str());
 
-    string packagePath = ros::package::getPath("projection_calibration");
 
-    string texFileName = packagePath + "/src/tj.bmp";
+            ROS_ERROR("Loading image: %s", iluErrorString(ilGetError()));
 
-    ROS_ERROR(texFileName.c_str());
+            ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE);
 
-    ilLoad(IL_BMP, texFileName.c_str());
-
-    ROS_ERROR("Loading image: %s", iluErrorString(ilGetError()));
-
-    ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE);
-
-    ROS_ERROR("Converting image: %s", iluErrorString(ilGetError()));
+            ROS_ERROR("Converting image: %s", iluErrorString(ilGetError()));
+        }
+        else
+        {
+            // Failed to load the image
+            ILenum error = ilGetError();
+            // Handle the error as needed
+            ilDeleteImages(1, &imageID); // Clean up the image ID
+        }
+    }
 
     texWidth = ilGetInteger(IL_IMAGE_WIDTH);
     texHeight = ilGetInteger(IL_IMAGE_HEIGHT);
 
+
+    // ROS_ERROR("window name is: %s", windowName);
+
     ROS_ERROR("%d", texWidth);
     ROS_ERROR("%d", texHeight);
 
-    // ILubyte* imageData = ilGetData();
 
     glfwSetErrorCallback(error_callback);
 
@@ -437,7 +543,7 @@ int main(int argc, char **argv)
         return -1;
     }
     // Create a window with a 4K resolution (3840x2160)
-    window = glfwCreateWindow(winWidth, winHeight, "GLFW 4K Window", NULL, NULL);
+    window = glfwCreateWindow(winWidth, winHeight, windowName, NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -455,9 +561,6 @@ int main(int argc, char **argv)
     // Set the window resize callback
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    // glMatrixMode(GL_MODELVIEW);
-    // glLoadIdentity();
-    // glTranslatef(0, 0, 0);
 
     // Create an FBO and attach the texture to it
     glGenFramebuffers(1, &fbo);
@@ -479,25 +582,12 @@ int main(int argc, char **argv)
         ////glViewport(0, 0, winWidth, winHeight);
 
         //// Clear the FBO
-        // glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        // glClear(GL_COLOR_BUFFER_BIT);
 
-        //      // Draw squares with updated positions
-        glClear(GL_COLOR_BUFFER_BIT);
-        // glGenTextures(1, &textureID);
-        // glBindTexture(GL_TEXTURE_2D, textureID);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-        //// Load image data into texture
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH),
-                     ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGB,
-                     GL_UNSIGNED_BYTE, ilGetData());
-
-        // Enable texture mapping
         glEnable(GL_TEXTURE_2D);
+
+        // Draw squares with updated positions
+        glClear(GL_COLOR_BUFFER_BIT);
+        //// Load image data into texture
 
         drawWalls();
 
@@ -517,7 +607,14 @@ int main(int argc, char **argv)
     }
 
     glfwDestroyWindow(window);
-    ilDeleteImages(1, &ImgId);
+    for (ILuint imageID : imageIDs)
+    {
+        ilDeleteImages(1, &imageID);
+    }
+
+    // Shutdown DevIL
+    ilShutDown();
+
     // Terminate GLFW
     glfwTerminate();
 
