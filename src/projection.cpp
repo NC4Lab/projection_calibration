@@ -14,6 +14,7 @@
 
 // #include <Eigen/Dense>
 // #include "Eigen/Dense"
+const int MAZE_SIZE = 3;
 
 vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height, float shearAmount)
 {
@@ -35,8 +36,7 @@ string changeMode = "pos";
 float shearAmount = 0.0f; // Calculate the shear amount based on your requirements
 vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight,0);
 string packagePath = ros::package::getPath("projection_calibration");
-string configPath;
-string windowName;
+string configPath, windowName;
 
 // string texFileName = packagePath + "/src/tj.bmp";
 
@@ -58,8 +58,8 @@ float squarePositions[4][5] = {
     {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
 };
 
-float shearValues[7][7];
-float sizeValues[7][7];
+float shearValues[MAZE_SIZE][MAZE_SIZE];
+float sizeValues[MAZE_SIZE][MAZE_SIZE];
 
 float configurationValues[3][3][3];
 
@@ -103,7 +103,7 @@ void saveCoordinates()
 
 
     pugi::xml_document doc;
-
+    cerr << "doc created";
     // Create the root element
     pugi::xml_node root = doc.append_child("config");
 
@@ -123,6 +123,7 @@ void saveCoordinates()
     }
 
 
+    cerr << "created squaresP";
 
     float array2[3][3];
 
@@ -149,8 +150,9 @@ void saveCoordinates()
     }
 
 
+    cerr << "created H";
     // Save the XML document to a file
-    if (doc.save_file(configPath)) {
+    if (doc.save_file(configPath.c_str())) {
         std::cout << "XML file saved successfully." << std::endl;
     } else {
         std::cout << "Failed to save XML file." << std::endl;
@@ -167,7 +169,7 @@ void computeHomography()
     targetCorners.push_back(cv::Point2f(squarePositions[1][0], squarePositions[1][1]));
     targetCorners.push_back(cv::Point2f(squarePositions[2][0], squarePositions[2][1]));
     targetCorners.push_back(cv::Point2f(squarePositions[3][0], squarePositions[3][1]));
-    imageCorners = createRectPoints(0.0f, 0.0f, 6.0 * wallSep, 6.0 * wallSep, 0);
+    imageCorners = createRectPoints(0.0f, 0.0f, (float(MAZE_SIZE)-1) * wallSep, (float(MAZE_SIZE)-1) * wallSep, 0);
 
     H = findHomography(imageCorners, targetCorners);
     // H = findHomography(targetCorners, imageCorners);
@@ -178,7 +180,7 @@ void computeHomography()
 }
 void loadCoordinates() {
     pugi::xml_document doc;
-    if (!doc.load_file(configPath)) {
+    if (!doc.load_file(configPath.c_str())) {
         std::cout << "Failed to load XML file." << std::endl;
         return ;
     }
@@ -187,16 +189,15 @@ void loadCoordinates() {
     std::vector<std::vector<float>> squarePositions2;
     pugi::xml_node squarePositionsNode = doc.child("config").child("squarePositions");
     for (pugi::xml_node rowNode = squarePositionsNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row")) {
-        std::vector<float> row;
-        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell")) {
+        std::vector<float> row;        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell")) {
             float value = std::stof(cellNode.child_value());
             row.push_back(value);
         }
         squarePositions2.push_back(row);
     }
 
-    for (int i; i < 4; i++){
-        for(int j; j<5; j++){
+    for (int i=0; i < 4; i++){
+        for(int j=0; j<5; j++){
             squarePositions[i][j] = squarePositions2[i][j];
         }
     }
@@ -227,6 +228,8 @@ void loadCoordinates() {
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 
+    glfwMakeContextCurrent(window);
+
     if (action == GLFW_RELEASE)
     {
         if (key == GLFW_KEY_1)
@@ -247,6 +250,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         }
         else if (key == GLFW_KEY_ENTER)
         {
+            ROS_ERROR("save hit");
             saveCoordinates();
         }
         else if (key == GLFW_KEY_P)
@@ -309,21 +313,26 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         }
         else if (key == GLFW_KEY_M)
         {
+            ROS_ERROR(windowName.c_str()); //this should be showing something in the terminal, but isn't atm
             monitors = glfwGetMonitors(&monitor_count);
             monitorNumber++;
             monitor = monitors[monitorNumber % monitor_count];
             if (monitor)
             {
                 const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-                // glfwSetWindowAttrib(window, GLFW_FOCUS_ON_SHOW, GL_TRUE);
-                glfwSetWindowAttrib(window, GLFW_RESIZABLE,	GLFW_TRUE);
-                glfwSetWindowAttrib(window, GLFW_CONTEXT_RELEASE_BEHAVIOR,	GL_NONE);
+                glfwSetWindowAttrib(window, GLFW_FOCUS_ON_SHOW, GL_TRUE);
+                // glfwSetWindowAttrib(window, GLFW_RESIZABLE,	GLFW_TRUE);
+                // glfwSetWindowAttrib(window, GLFW_CONTEXT_RELEASE_BEHAVIOR,	GLFW_CONTEXT_RELEASE_BEHAVIOR_NONE);
                 glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
             }
         }
     }
     else if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
+        if (key == GLFW_KEY_ENTER){
+            cerr << "stuffies";
+            ROS_ERROR("BRO DOES THIS WORK?");
+        }
 
         if (changeMode == "pos")
         {
@@ -429,19 +438,19 @@ void drawWalls()
 
     // Enable texture mapping
     glEnable(GL_TEXTURE_2D);
-    for (float i = 0; i < 7; i++)
+    for (float i = 0; i < MAZE_SIZE; i++)
     {
         ilBindImage(imageIDs[imageNumber]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, ilGetInteger(IL_IMAGE_WIDTH),
                      ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGB,
                      GL_UNSIGNED_BYTE, ilGetData());
         glEnable(GL_TEXTURE_2D);
-        for (float j = 0; j < 7; j++)
+        for (float j = 0; j < MAZE_SIZE; j++)
         {
             glBindTexture(GL_TEXTURE_2D, fboTexture);
 
-            shearAmount = shear4 + (i / 6.0) * (shear3 - shear4) + (j / 6) * (shear1 - shear4);
-            float heightAmount = height4 + (i / 6.0) * (height3 - height4) + (j / 6) * (height1 - height4);
+            shearAmount = shear4 + (i / (float(MAZE_SIZE)-1)) * (shear3 - shear4) + (j / (float(MAZE_SIZE)-1)) * (shear1 - shear4);
+            float heightAmount = height4 + (i / float(MAZE_SIZE)-1) * (height3 - height4) + (j / (float(MAZE_SIZE)-1)) * (height1 - height4);
             vector<cv::Point2f> c = createRectPoints(0.0f, 0.0f, wallWidth, heightAmount, shearAmount);
 
             for (auto it = c.begin(); it != c.end(); it++)
@@ -481,13 +490,18 @@ void drawWalls()
 int main(int argc, char **argv)
 {
 
-    ros::init(argc, argv, "Projection", ros::init_options::AnonymousName);
+    ros::init(argc, argv, "projection_calibration_node", ros::init_options::AnonymousName);
     ros::NodeHandle n;
     ros::NodeHandle nh("~");
     ROS_ERROR("main ran");
 
-    nh.getParam("configPath", configPath);
-    nh.getParam("windowName", windowName);
+    string tempPath, tempName;
+
+    nh.param<string>("configPath", tempPath, "");
+    nh.param<string>("windowName", tempName,"");
+
+    configPath = tempPath.c_str();
+    windowName = tempName.c_str();
 
     ROS_ERROR("config path is:" );
     ROS_ERROR(configPath.c_str());
@@ -543,7 +557,7 @@ int main(int argc, char **argv)
         return -1;
     }
     // Create a window with a 4K resolution (3840x2160)
-    window = glfwCreateWindow(winWidth, winHeight, windowName, NULL, NULL);
+    window = glfwCreateWindow(winWidth, winHeight, windowName.c_str(), NULL, NULL);
     if (!window)
     {
         glfwTerminate();

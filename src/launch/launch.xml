@@ -3,12 +3,12 @@
 
 
     <node name="projectionSceneFirstProjector" pkg="projection_calibration" type="projection_calibration_node">
-        <param name="configPath" type="string" value="src/projection_calibration/src/config1/config1.xml" />
-        <param name="windowName" type="string" value="Projector 1" />
+        <param name="configPath" value="src/projection_calibration/src/config1/config1.xml" />
+        <param name="windowName" value="Projector 1" />
     </node>
     <node name="projectionSceneSecondProjector" pkg="projection_calibration" type="projection_calibration_node">
-        <param name="configPath" type="string" value="src/projection_calibration/src/config2/config2.xml" />
-        <param name="windowName" type="string" value="Projector 2" />
+        <param name="configPath" type="str" value="src/projection_calibration/src/config2/config2.xml" />
+        <param name="windowName" value="Projector 2" />
     </node>
     <!-- <node name="Projection Calibration 2" pkg="projection_calibration" type="projection_calibration_node">
     </node> -->
