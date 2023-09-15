@@ -1,3 +1,13 @@
+// ######################################
+
+//======== projection.cpp ==========
+
+// ######################################
+
+//============= INCLUDE ================
+
+#include "projection.h"
+
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <XmlRpcValue.h>
@@ -11,34 +21,40 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "pugixml.hpp"
-
 // #include <Eigen/Dense>
 // #include "Eigen/Dense"
+
+	// ============= VARIABLES =============
+
+ // Constants
 const int MAZE_SIZE = 3;
 
-vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height, float shearAmount)
-{
-    vector<cv::Point2f> rectPoints;
-    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount, y0 + height));
-    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount + width, y0 + height));
-    rectPoints.push_back(cv::Point2f(x0 + width, y0));
-    rectPoints.push_back(cv::Point2f(x0, y0));
+// Variables related to square positions and transformation
+int imageNumber = 0;
+float squarePositions[4][5] = {
+    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
+    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
+    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
+    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
+};
+float shearValues[MAZE_SIZE][MAZE_SIZE];
+float sizeValues[MAZE_SIZE][MAZE_SIZE];
+float configurationValues[3][3][3];
+cv::Mat H = cv::Mat::eye(3, 3, CV_32F);
+int selectedSquare = 0;
 
-    return rectPoints;
-}
-
-int imageNumber;
-
+// Variables related to wall properties
 float wallWidth = 0.02f;
 float wallHeight = 0.02f;
 float wallSep = 0.05f;
 string changeMode = "pos";
-float shearAmount = 0.0f; // Calculate the shear amount based on your requirements
-vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight,0);
-string packagePath = ros::package::getPath("projection_calibration");
-string configPath, windowName;
+float shearAmount = 0.0f;
+vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight, 0);
 
-// string texFileName = packagePath + "/src/tj.bmp";
+// Variables related to image and file paths
+string packagePath = ros::package::getPath("projection_calibration");
+string configPath;
+string windowName;
 
 // List of image file paths
 std::vector<std::string> imagePaths = {
@@ -50,22 +66,7 @@ std::vector<std::string> imagePaths = {
 // Container to hold the loaded images
 std::vector<ILuint> imageIDs;
 
-// x,y,width,height, shear
-float squarePositions[4][5] = {
-    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
-    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
-    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
-    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
-};
-
-float shearValues[MAZE_SIZE][MAZE_SIZE];
-float sizeValues[MAZE_SIZE][MAZE_SIZE];
-
-float configurationValues[3][3][3];
-
-cv::Mat H = cv::Mat::eye(3, 3, CV_32F);
-
-int selectedSquare = 0;
+// Variables related to window and OpenGL
 int winWidth = 3840;
 int winHeight = 2160;
 GLFWwindow *window;
@@ -76,10 +77,13 @@ int monitorNumber = 0;
 GLFWmonitor **monitors;
 int monitor_count;
 
-ILint texWidth, texHeight;
+ILint texWidth;
+ILint texHeight;
 
-// Callback function for handling window resize events
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+// ============= METHODS =============
+
+
+void callbackFrameBufferSize(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
@@ -93,7 +97,7 @@ void checkGLError()
     }
 }
 
-static void error_callback(int error, const char *description)
+static void callbackError(int error, const char *description)
 {
     ROS_ERROR("Error: %s\n", description);
 }
@@ -155,6 +159,8 @@ void saveCoordinates()
     if (doc.save_file(configPath.c_str())) {
         std::cout << "XML file saved successfully." << std::endl;
     } else {
+        // Print configPath.c_str()
+        std::cout << configPath.c_str() << std::endl;
         std::cout << "Failed to save XML file." << std::endl;
     }
 
@@ -194,16 +200,13 @@ void loadCoordinates() {
             row.push_back(value);
         }
         squarePositions2.push_back(row);
-    }
+     }
 
     for (int i=0; i < 4; i++){
         for(int j=0; j<5; j++){
             squarePositions[i][j] = squarePositions2[i][j];
         }
     }
-
-
-
 
     // Retrieve H
     std::vector<std::vector<float>> H2;
@@ -224,58 +227,79 @@ void loadCoordinates() {
 
 }
 
-
+/// @ref: GLFW/glfw3.h for keybindings enum
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 
     glfwMakeContextCurrent(window);
 
+    // Any key release action
     if (action == GLFW_RELEASE)
     {
+        // Image selector keys [1-4]
+
+        // Top-left square
         if (key == GLFW_KEY_1)
         {
             selectedSquare = 0;
         }
+        // Top-right square
         else if (key == GLFW_KEY_2)
         {
             selectedSquare = 1;
         }
+        // Bottom-right square
         else if (key == GLFW_KEY_3)
         {
             selectedSquare = 2;
         }
+        // Bottom-left square
         else if (key == GLFW_KEY_4)
         {
             selectedSquare = 3;
         }
+
+        // Save coordinates to CSV
         else if (key == GLFW_KEY_ENTER)
         {
             ROS_ERROR("save hit");
             saveCoordinates();
         }
+
+        // Set image to image 1
+        else if (key == GLFW_KEY_C){
+            imageNumber = 1;
+        }
+        // Set image to image 2
+        else if (key == GLFW_KEY_T){
+            imageNumber = 0;
+        }
+
+        // Change mode keys [P, D, S]
+
+        // Square position [up, down, left, right]
         else if (key == GLFW_KEY_P)
         {
             changeMode = "pos";
         }
-        else if (key == GLFW_KEY_C){
-            imageNumber = 1;
-        }
-        else if (key == GLFW_KEY_T){
-            imageNumber = 0;
-        }
+        // Square height [up, down]
+        /// @note: can only select squares 1-3
         else if (key == GLFW_KEY_D)
         {
             changeMode = "dimensions";
         }
+        // Square shear [up, down]
+        /// @note: can only select squares 1-3
         else if (key == GLFW_KEY_S)
         {
             changeMode = "shear";
         }
-
+        // Load coordinates from CSV
         else if (key == GLFW_KEY_L){
             loadCoordinates();
         }
 
+        // Fullscreen keys [F, M]
         else if (key == GLFW_KEY_F)
         {
             monitors = glfwGetMonitors(&monitor_count);
@@ -311,6 +335,8 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
                 glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
             }
         }
+
+        // Toggles monotor/projector in sequence
         else if (key == GLFW_KEY_M)
         {
             ROS_ERROR(windowName.c_str()); //this should be showing something in the terminal, but isn't atm
@@ -327,6 +353,8 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
             }
         }
     }
+
+    // Any key press action or repeat
     else if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
         if (key == GLFW_KEY_ENTER){
@@ -340,7 +368,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
             // Listen for arrow key input to move selected square
             if (key == GLFW_KEY_LEFT)
             {
-                squarePositions[selectedSquare][0] -= 0.05f;
+                squarePositions[selectedSquare][0] -= 0.05f; // units normalized half monitor width
             }
             else if (key == GLFW_KEY_RIGHT)
             {
@@ -424,7 +452,7 @@ void drawRect(vector<cv::Point2f> corners, int imageNumber)
     glEnd();
 }
 
-
+// Draws the multiple wall images
 void drawWalls()
 {
 
@@ -484,7 +512,6 @@ void drawWalls()
         }
     }
 }
-
 
 
 int main(int argc, char **argv)
@@ -549,7 +576,7 @@ int main(int argc, char **argv)
     ROS_ERROR("%d", texHeight);
 
 
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(callbackError);
 
     if (!glfwInit())
     {
@@ -573,7 +600,7 @@ int main(int argc, char **argv)
     glfwSetKeyCallback(window, keyCallback);
     GLuint textureID;
     // Set the window resize callback
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback(window, callbackFrameBufferSize);
 
 
     // Create an FBO and attach the texture to it

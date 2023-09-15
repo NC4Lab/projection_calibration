@@ -1,3 +1,12 @@
+// ######################################
+
+//========= projection.h ===========
+
+// ######################################
+#ifndef _projection_h
+#define _projection_h
+
+//============= INCLUDE ================
 
 //#define BOOST_BIND_NO_PLACEHOLDERS
 //#define APIENTRY __stdcall
@@ -20,7 +29,7 @@ using namespace boost::placeholders;
 #include<IL/ilu.h>
 #include<IL/ilut.h>
 
-// #include <GL/gl.h>
+//#include <GL/gl.h>
 //#include <GL/glcorearb.h>
 //#include <GL/glu.h>  // Include GLU library for gluErrorString()
 //#include <glfw-3.3.8/deps/glad/gl.h>
@@ -70,28 +79,36 @@ using namespace std;
 // typedef std::vector<XmlRpc::XmlRpcValue> Row;
 // typedef std::vector<std::vector<XmlRpc::XmlRpcValue>> XmlRpcArray;
 
-float r = 140.0f / 255.0f;
-float g = 72.0f / 255.0f;
-float b = 159.0f / 255.0f;
+// ============= METHODS =============
 
-//#include "C://GL/GLAD/src/"
-//#include "../glfw-3.3.8/deps/glad/gl.h"
-//#include "../glfw-3.3.8/deps/glad/vk_platform.h"
-//#include "../glfw-3.3.8/deps/glad/vulkan.h"
-//#include <GL/glut.h>
-
-
-//void reshape(int, int);
-//void quitVisualScene();
-////void toggleFullscreen();
-//void keyPressed(unsigned char, int, int);
-//void init();
-//void display();
-//void err_callback();
+// Function to save coordinates to an XML file
 void saveCoordinates();
-int main(int, char**);
 
+// Function to compute homography matrix
+void computeHomography();
 
-//void loadPNG(const char* filename);
+// Function to load coordinates from an XML file
+void loadCoordinates();
 
+// Callback function for handling window resize events
+void callbackFrameBufferSize(GLFWwindow *, int, int);
 
+// Callback function for handling GLFW errors
+static void callbackError(int, const char *);
+
+// Callback function for handling keyboard input
+void keyCallback(GLFWwindow *, int, int, int, int);
+
+// Function to draw a target
+void drawTarget(float, float, float, float);
+
+// Function to draw a rectangle with given corners
+void drawRect(vector<cv::Point2f>, int);
+
+// Function to draw multiple wall images
+void drawWalls();
+
+// The main function of your program
+int main(int, char **);
+
+#endif
