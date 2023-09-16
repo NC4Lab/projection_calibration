@@ -24,9 +24,8 @@
 // #include <Eigen/Dense>
 // #include "Eigen/Dense"
 
-	// ============= VARIABLES =============
-
- // Constants
+// ============= VARIABLES =============
+// Constants
 const int MAZE_SIZE = 3;
 
 // Variables related to square positions and transformation
