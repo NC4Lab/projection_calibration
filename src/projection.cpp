@@ -1,44 +1,43 @@
-#include <ros/ros.h>
-#include <ros/package.h>
-#include <XmlRpcValue.h>
-#include "projection.h"
-#include <opencv2/calib3d.hpp>
-#include <opencv2/core/types.hpp>
-#include <opencv2/core/hal/interface.h>
-// #include "opencv2/highgui.hpp"
-// #include <opencv2/imgproc/hal/hal.hpp>
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "pugixml.hpp"
+// ######################################
 
-// #include <Eigen/Dense>
-// #include "Eigen/Dense"
+//======== projection.cpp ==========
+
+// ######################################
+
+//============= INCLUDE ================
+#include "projection.h"
+
+// ============= VARIABLES =============
+
+// Constants
 const int MAZE_SIZE = 3;
 
-vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height, float shearAmount)
-{
-    vector<cv::Point2f> rectPoints;
-    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount, y0 + height));
-    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount + width, y0 + height));
-    rectPoints.push_back(cv::Point2f(x0 + width, y0));
-    rectPoints.push_back(cv::Point2f(x0, y0));
+// Variables related to square positions and transformation
+int imageNumber = 0;
+float squarePositions[4][5] = {
+    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
+    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
+    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
+    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
+};
+float shearValues[MAZE_SIZE][MAZE_SIZE];
+float sizeValues[MAZE_SIZE][MAZE_SIZE];
+float configurationValues[3][3][3];
+cv::Mat H = cv::Mat::eye(3, 3, CV_32F);
+int selectedSquare = 0;
 
-    return rectPoints;
-}
-
-int imageNumber;
-
+// Variables related to wall properties
 float wallWidth = 0.02f;
 float wallHeight = 0.02f;
 float wallSep = 0.05f;
 string changeMode = "pos";
-float shearAmount = 0.0f; // Calculate the shear amount based on your requirements
-vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight,0);
-string packagePath = ros::package::getPath("projection_calibration");
-string configPath, windowName;
+float shearAmount = 0.0f;
+vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight, 0);
 
-// string texFileName = packagePath + "/src/tj.bmp";
+// Variables related to image and file paths
+string packagePath = ros::package::getPath("projection_calibration");
+string configPath;
+string windowName;
 
 // List of image file paths
 std::vector<std::string> imagePaths = {
@@ -50,22 +49,7 @@ std::vector<std::string> imagePaths = {
 // Container to hold the loaded images
 std::vector<ILuint> imageIDs;
 
-// x,y,width,height, shear
-float squarePositions[4][5] = {
-    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
-    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
-    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
-    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
-};
-
-float shearValues[MAZE_SIZE][MAZE_SIZE];
-float sizeValues[MAZE_SIZE][MAZE_SIZE];
-
-float configurationValues[3][3][3];
-
-cv::Mat H = cv::Mat::eye(3, 3, CV_32F);
-
-int selectedSquare = 0;
+// Variables related to window and OpenGL
 int winWidth = 3840;
 int winHeight = 2160;
 GLFWwindow *window;
@@ -76,7 +60,21 @@ int monitorNumber = 0;
 GLFWmonitor **monitors;
 int monitor_count;
 
-ILint texWidth, texHeight;
+ILint texWidth;
+ILint texHeight;
+
+// ============= METHODS =============
+
+vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height, float shearAmount)
+{
+    vector<cv::Point2f> rectPoints;
+    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount, y0 + height));
+    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount + width, y0 + height));
+    rectPoints.push_back(cv::Point2f(x0 + width, y0));
+    rectPoints.push_back(cv::Point2f(x0, y0));
+
+    return rectPoints;
+}
 
 // Callback function for handling window resize events
 void framebuffer_size_callback(GLFWwindow *window, int width, int height)

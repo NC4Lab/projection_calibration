@@ -120,6 +120,7 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
+#set(PROJECTION_DIR "C:/ws/src/projection_calibration")
 
 ###########
 ## Build ##
@@ -130,7 +131,6 @@ catkin_package(
 # set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include")
 # set(IL_LIB_DIR "C:/Program Files (x86)/IL/lib/x64/Release/")
 # set(glm_DIR "C:/Program Files (x86)/glm/cmake/glm/")
-
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -186,13 +186,29 @@ add_executable(${PROJECT_NAME}_node
 	src/glad.c
 	src/glad/glad.h
 	src/glm/glm.hpp
-  # src/Eigen/Eigen
-  src/Eigen/Dense
 	src/learnopengl/camera.h
 	src/learnopengl/shader_m.h
   src/pugixml/pugixml.cpp
   src/pugixml/pugixml.hpp
-	)
+)
+
+# Copy DevIL.dll to the executable's directory post-build
+add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/DevIL.dll
+                   $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
+
+# Copy ILU.dll to the executable's directory post-build
+add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/ILU.dll
+                   $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
+
+# Copy ILUT.dll to the executable's directory post-build
+add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/ILUT.dll
+                   $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -204,6 +220,26 @@ target_link_libraries(${PROJECT_NAME}_node
 	glfw GLAD # glm
   ${OpenCV_LIBRARIES}
 )
+
+## Print out the values of the environment variables
+message("[ENV]: PROJECT_NAME set to: ${PROJECT_NAME}")
+message("[ENV]: PROJECTION_DIR set to: ${PROJECTION_DIR}")
+message("[ENV]: glfw3_DIR set to: ${glfw3_DIR}")
+message("[ENV]: IL_INCLUDE_DIR set to: $ENV{IL_INCLUDE_DIR}") 
+message("[ENV]: IL_LIB_DIR set to: $ENV{IL_LIB_DIR}")
+message("[ENV]: glm_DIR set to: ${glm_DIR}")
+message("[ENV]: IL_LIBRARY set to: ${IL_LIBRARY}")
+message("[ENV]: ILU_LIBRARY set to: ${ILU_LIBRARY}")
+message("[ENV]: ILUT_LIBRARY set to: ${ILUT_LIBRARY}")
+message("[ENV]: OpenCV_INCLUDE_DIRS set to: ${OpenCV_INCLUDE_DIRS}")
+message("[ENV]: OpenCV_LIBRARIES set to: ${OpenCV_LIBRARIES}")
+message("[ENV]: OpenCV_LIBS set to: ${OpenCV_LIBS}")
+message("[ENV]: OpenCV_DIR set to: ${OpenCV_DIR}")
+message("[ENV]: Boost_LIBRARIES set to: ${Boost_LIBRARIES}")
+message("[ENV]: Boost_INCLUDE_DIRS set to: ${Boost_INCLUDE_DIRS}")
+message("[ENV]: Boost_LIBRARY_DIRS set to: ${Boost_LIBRARY_DIRS}")
+message("[ENV]: Boost_LIB_VERSION set to: ${Boost_LIB_VERSION}")
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use

@@ -1,97 +1,123 @@
+// ######################################
 
-//#define BOOST_BIND_NO_PLACEHOLDERS
-//#define APIENTRY __stdcall
+//========= projection.h ===========
 
-//#define BOOST_BIND_GLOBAL_PLACEHOLDERS
-//#include <boost/bind/bind.hpp>
-#include <boost/bind/bind.hpp>
-using namespace boost::placeholders;
+// ######################################
+#ifndef _projection_h
+#define _projection_h
 
-// Rest of your code
+//============= INCLUDE ================
 
+// // GLAD for OpenGL function pointers
+// /// @note GLAD must be included before GLFW
+// #include "glad/glad.h"
+
+// // GLFW for window management
+// #include <GLFW/glfw3.h>
+
+// OpenGL (GLAD and GLFW) for graphics and windowing
 #define GLAPIENTRY APIENTRY
 #include "glad/glad.h"
-#define GLFW_INCLUDE_NONE 
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-//DevIL libraries
-#include<IL/il.h>
-#include<IL/devil_cpp_wrapper.hpp>
-#include<IL/ilu.h>
-#include<IL/ilut.h>
+// DevIL for image loading and manipulation
+#include <IL/il.h>
+#include <IL/ilu.h>
+#include <IL/ilut.h>
+#include <IL/devil_cpp_wrapper.hpp>
 
-// #include <GL/gl.h>
-//#include <GL/glcorearb.h>
-//#include <GL/glu.h>  // Include GLU library for gluErrorString()
-//#include <glfw-3.3.8/deps/glad/gl.h>
+// ROS for robot operating system functionalities
 #include <ros/ros.h>
 #include <ros/console.h>
+#include <ros/package.h>
+#include <XmlRpcValue.h>
 
+// Standard Library for various utilities
 #include <fstream>
-#include <string>
-//#include <windows.h>
-
-//#include <gl/GL.h>
-//#include <gl/GLU.h>
-#include <cstdio>
 #include <cstdlib>
-
-#include <iostream>     // std::cout
-#include <algorithm>    // std::find
-#include <vector>  
-
-//#include "../lodepng/lodepng.h"
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <float.h>
 #include <iostream>
-#include <sstream>
-#include <regex>
+#include <algorithm>
 #include <vector>
-#include <cmath>
-#include "glm/glm.hpp"
-#include "glm/ext.hpp"
-#include "glm/gtx/string_cast.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "learnopengl/shader_m.h"
-#include "learnopengl/camera.h" 
-using namespace glm;
+#include <string>
+
+// PugiXML for XML parsing
+#include "pugixml.hpp"
+
+// OpenCV for computer vision tasks
+#include <opencv2/calib3d.hpp>
+#include <opencv2/core/types.hpp>
+#include <opencv2/core/hal/interface.h>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+#include "opencv2/highgui.hpp"
+
+// Namespace declarations
 using namespace std;
-#include <iostream>
-#include <bitset>
 
+// ============= VARIABLES =============
 
-#include "../nanosvg-master/src/nanosvg.h"
-#include "../nanosvg-master/src/nanosvgrast.h"
-//#include <GL/gl.h>
+// Constants
+const int MAZE_SIZE = 3;
 
-// typedef XmlRpc::XmlRpcValue XmlRpcValue;
-// typedef std::vector<XmlRpc::XmlRpcValue> Row;
-// typedef std::vector<std::vector<XmlRpc::XmlRpcValue>> XmlRpcArray;
+// Variables related to square positions and transformation
+int imageNumber = 0;
+float squarePositions[4][5] = {
+    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
+    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
+    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
+    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
+};
+float shearValues[MAZE_SIZE][MAZE_SIZE];
+float sizeValues[MAZE_SIZE][MAZE_SIZE];
+float configurationValues[3][3][3];
+cv::Mat H = cv::Mat::eye(3, 3, CV_32F);
+int selectedSquare = 0;
 
-float r = 140.0f / 255.0f;
-float g = 72.0f / 255.0f;
-float b = 159.0f / 255.0f;
+// Variables related to wall properties
+float wallWidth = 0.02f;
+float wallHeight = 0.02f;
+float wallSep = 0.05f;
+string changeMode = "pos";
+float shearAmount = 0.0f;
+vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight, 0);
 
-//#include "C://GL/GLAD/src/"
-//#include "../glfw-3.3.8/deps/glad/gl.h"
-//#include "../glfw-3.3.8/deps/glad/vk_platform.h"
-//#include "../glfw-3.3.8/deps/glad/vulkan.h"
-//#include <GL/glut.h>
+// Variables related to image and file paths
+string packagePath = ros::package::getPath("projection_calibration");
+string configPath;
+string windowName;
 
+// List of image file paths
+std::vector<std::string> imagePaths = {
+    packagePath + "/src/tj.bmp",
+    packagePath + "/src/mmCarribean.png",
+    // Add more image file paths as needed
+};
 
-//void reshape(int, int);
-//void quitVisualScene();
-////void toggleFullscreen();
-//void keyPressed(unsigned char, int, int);
-//void init();
-//void display();
-//void err_callback();
+// Container to hold the loaded images
+std::vector<ILuint> imageIDs;
+
+// Variables related to window and OpenGL
+int winWidth = 3840;
+int winHeight = 2160;
+GLFWwindow *window;
+GLuint fbo;
+GLuint fboTexture;
+GLFWmonitor *monitor = NULL;
+int monitorNumber = 0;
+GLFWmonitor **monitors;
+int monitor_count;
+
+ILint texWidth;
+ILint texHeight;
+
+// ============= METHODS =============
+
+std::vector<cv::Point2f> createRectPoints(float, float, float, float, float);
+
 void saveCoordinates();
 int main(int, char**);
 
-
-//void loadPNG(const char* filename);
+#endif
 
 
