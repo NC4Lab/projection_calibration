@@ -17,41 +17,11 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
-# find_package(OpenGL REQUIRED)
 find_package(OpenCV REQUIRED)
+# find_package(OpenGL REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
-
-## Uncomment this if the package has a setup.py. This macro ensures
-## modules and global scripts declared therein get installed
-## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
-
-################################################
-## Declare ROS messages, services and actions ##
-################################################
-
-## To declare and build messages, services or actions from within this
-## package, follow these steps:
-## * Let MSG_DEP_SET be the set of packages whose message types you use in
-##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
-## * In the file package.xml:
-##   * add a build_depend tag for "message_generation"
-##   * add a build_depend and a exec_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
-##     but can be declared for certainty nonetheless:
-##     * add a exec_depend tag for "message_runtime"
-## * In this file (CMakeLists.txt):
-##   * add "message_generation" and every package in MSG_DEP_SET to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * add "message_runtime" and every package in MSG_DEP_SET to
-##     catkin_package(CATKIN_DEPENDS ...)
-##   * uncomment the add_*_files sections below as needed
-##     and list every .msg/.srv/.action file to be processed
-##   * uncomment the generate_messages entry below
-##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
  add_message_files(
@@ -62,45 +32,11 @@ find_package(OpenCV REQUIRED)
    #Message2.msg
  )
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
-
-## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
-
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
    std_msgs  # Or other packages containing msgs
 )
-
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
-
-## To declare and build dynamic reconfigure parameters within this
-## package, follow these steps:
-## * In the file package.xml:
-##   * add a build_depend and a exec_depend tag for "dynamic_reconfigure"
-## * In this file (CMakeLists.txt):
-##   * add "dynamic_reconfigure" to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * uncomment the "generate_dynamic_reconfigure_options" section below
-##     and list every .cfg file to be processed
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
 
 ###################################
 ## catkin specific configuration ##
@@ -120,33 +56,43 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
-#set(PROJECTION_DIR "C:/ws/src/projection_calibration")
-
 ###########
 ## Build ##
 ###########
 # TODO - README.md should ask user to install these libraries and create environment variables pointing to them.
-# set(PROJECTION_DIR "C:/ws/src/projection_calibration")
-# set(glfw3_DIR "C:/Program Files (x86)/GLFW/lib/cmake/glfw3/")
-# set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include")
-# set(IL_LIB_DIR "C:/Program Files (x86)/IL/lib/x64/Release/")
-# set(glm_DIR "C:/Program Files (x86)/glm/cmake/glm/")
+set(glfw3_DIR "C:/Program Files (x86)/GLFW/lib/cmake/glfw3/")
+set(IL_INCLUDE_DIR "C:/Program Files (x86)/IL/include")
+set(IL_LIB_DIR "C:/Program Files (x86)/IL/lib/x64/Release/")
+set(glm_DIR "C:/Program Files (x86)/glm/cmake/glm/")
+
+# Find GLFW
+find_package(glfw3 REQUIRED)
+
+# Include directories for GLFW and DevIL
+include_directories(${glfw3_INCLUDE_DIRS})
+include_directories(${IL_INCLUDE_DIR})
+
+# # Link GLFW and specify DevIL libraries manually
+# target_link_libraries(your_target ${glfw3_LIBRARIES})
+# target_link_libraries(your_target "${IL_LIB_DIR}/DevIL.lib")
+# target_link_libraries(your_target "${IL_LIB_DIR}/ILU.lib")
+# target_link_libraries(your_target "${IL_LIB_DIR}/ILUT.lib")
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
-  #${PROJECTION_DIR}/glfw-3.3.8/include
- # ${PROJECTION_DIR}/glfw-3.3.8/deps/glad
+  #${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/glfw-3.3.8/include
+ # ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/glfw-3.3.8/deps/glad
   # ${glfw3_dir}/../../../include
   ${glfw3_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   $ENV{IL_INCLUDE_DIR}
-  ${PROJECTION_DIR}/src/glm
-  ${PROJECTION_DIR}/src/pugixml
+  ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/src/glm
+  ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/src/pugixml
  # "C:/Program Files (x86)/IL/include"
- # ${PROJECTION_DIR}/dll
+ # ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/dll
 
 )
 
@@ -168,10 +114,6 @@ if(ILU_LIBRARY)
 #  message(FATAL_ERROR "ILU library not found")
 endif()
 
-#find_package(IL REQUIRED)
-#add_subdirectory(glfw-3.3.8)
-#add_subdirectory(glfw-3.3.8/deps/glad)
-#add_subdirectory(nanosvg-master)
 
 add_library(GLAD src/glad.c)
 
@@ -186,8 +128,8 @@ add_executable(${PROJECT_NAME}_node
 	src/glad.c
 	src/glad/glad.h
 	src/glm/glm.hpp
-	src/learnopengl/camera.h
-	src/learnopengl/shader_m.h
+	# src/learnopengl/camera.h
+	# src/learnopengl/shader_m.h
   src/pugixml/pugixml.cpp
   src/pugixml/pugixml.hpp
 )
@@ -195,27 +137,27 @@ add_executable(${PROJECT_NAME}_node
 # Copy DevIL.dll to the executable's directory post-build
 add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/DevIL.dll
+                   ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/dll/DevIL.dll
                    $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
 
 # Copy ILU.dll to the executable's directory post-build
 add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/ILU.dll
+                   ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/dll/ILU.dll
                    $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
 
 # Copy ILUT.dll to the executable's directory post-build
 add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/ILUT.dll
+                   ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/dll/ILUT.dll
                    $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
 
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+# set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+# set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
 target_link_libraries(${PROJECT_NAME}_node 
 	${catkin_LIBRARIES}
-	${Boost_LIBRARIES}
 	${IL_LIBRARY} ${ILU_LIBRARY} ${ILUT_LIBRARY}	
 	glfw GLAD # glm
   ${OpenCV_LIBRARIES}
@@ -223,7 +165,8 @@ target_link_libraries(${PROJECT_NAME}_node
 
 ## Print out the values of the environment variables
 message("[ENV]: PROJECT_NAME set to: ${PROJECT_NAME}")
-message("[ENV]: PROJECTION_DIR set to: ${PROJECTION_DIR}")
+message("[ENV]: catkin_LIBRARIES set to: ${catkin_LIBRARIES}")
+message("[ENV]: CMAKE_SOURCE_DIR set to: ${CMAKE_SOURCE_DIR}")
 message("[ENV]: glfw3_DIR set to: ${glfw3_DIR}")
 message("[ENV]: IL_INCLUDE_DIR set to: $ENV{IL_INCLUDE_DIR}") 
 message("[ENV]: IL_LIB_DIR set to: $ENV{IL_LIB_DIR}")
@@ -235,10 +178,6 @@ message("[ENV]: OpenCV_INCLUDE_DIRS set to: ${OpenCV_INCLUDE_DIRS}")
 message("[ENV]: OpenCV_LIBRARIES set to: ${OpenCV_LIBRARIES}")
 message("[ENV]: OpenCV_LIBS set to: ${OpenCV_LIBS}")
 message("[ENV]: OpenCV_DIR set to: ${OpenCV_DIR}")
-message("[ENV]: Boost_LIBRARIES set to: ${Boost_LIBRARIES}")
-message("[ENV]: Boost_INCLUDE_DIRS set to: ${Boost_INCLUDE_DIRS}")
-message("[ENV]: Boost_LIBRARY_DIRS set to: ${Boost_LIBRARY_DIRS}")
-message("[ENV]: Boost_LIB_VERSION set to: ${Boost_LIB_VERSION}")
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

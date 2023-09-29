@@ -187,7 +187,7 @@ void drawMaze()
 }
 
 // Callback function for handling window resize events
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+void callbackFrameBufferSize(GLFWwindow *window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
@@ -693,7 +693,7 @@ int main(int argc, char **argv)
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GLFW_TRUE);
     // GLuint textureID;
     // Set the window resize callback
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback(window, callbackFrameBufferSize);
 
     // Create an FBO and attach the texture to it
     glGenFramebuffers(1, &fbo);

@@ -68,37 +68,71 @@ ILint texHeight;
 vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height, float shearAmount)
 {
     vector<cv::Point2f> rectPoints;
-    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount, y0 + height));
-    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount + width, y0 + height));
+    rectPoints.push_back(cv::Point2f(x0 + height * shearAmount, y0 + height));
+    rectPoints.push_back(cv::Point2f(x0 + height * shearAmount + width, y0 + height));
     rectPoints.push_back(cv::Point2f(x0 + width, y0));
     rectPoints.push_back(cv::Point2f(x0, y0));
 
     return rectPoints;
 }
 
-// Callback function for handling window resize events
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-}
 
-void checkGLError()
+void loadCoordinates()
 {
-    GLenum err;
-    while ((err = glGetError()) != GL_NO_ERROR)
+    pugi::xml_document doc;
+    if (!doc.load_file(configPath.c_str()))
     {
-        ROS_ERROR("OpenGL error: %d", static_cast<int>(err));
+        std::cout << "Failed to load XML file." << std::endl;
+        return;
+    }
+
+    // Retrieve squarePositions
+    std::vector<std::vector<float>> squarePositions2;
+    pugi::xml_node squarePositionsNode = doc.child("config").child("squarePositions");
+    for (pugi::xml_node rowNode = squarePositionsNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row"))
+    {
+        std::vector<float> row;
+        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell"))
+        {
+            float value = std::stof(cellNode.child_value());
+            row.push_back(value);
+        }
+        squarePositions2.push_back(row);
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 5; j++)
+        {
+            squarePositions[i][j] = squarePositions2[i][j];
+        }
+    }
+
+    // Retrieve H
+    std::vector<std::vector<float>> H2;
+    pugi::xml_node HNode = doc.child("config").child("H");
+    for (pugi::xml_node rowNode = HNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row"))
+    {
+        std::vector<float> row;
+        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell"))
+        {
+            float value = std::stof(cellNode.child_value());
+            row.push_back(value);
+        }
+        H2.push_back(row);
+    }
+    for (int i; i < 3; i++)
+    {
+        for (int j; j < 3; j++)
+        {
+            H.at<float>(i, j) = H2[i][j];
+        }
     }
 }
 
-static void error_callback(int error, const char *description)
-{
-    ROS_ERROR("Error: %s\n", description);
-}
 
 void saveCoordinates()
 {
-
 
     pugi::xml_document doc;
     cerr << "doc created";
@@ -108,26 +142,29 @@ void saveCoordinates()
     pugi::xml_node arrayNode = root.append_child("squarePositions");
 
     // Iterate over the rows of the 2D array
-    for (const auto& row : squarePositions) {
+    for (const auto &row : squarePositions)
+    {
         // Create a row element
         pugi::xml_node rowNode = arrayNode.append_child("Row");
 
         // Iterate over the elements in the row
-        for (const auto& value : row) {
+        for (const auto &value : row)
+        {
             // Create a cell element
             pugi::xml_node cellNode = rowNode.append_child("Cell");
             cellNode.append_child(pugi::node_pcdata).set_value(std::to_string(value).c_str());
         }
     }
 
-
     cerr << "created squaresP";
 
     float array2[3][3];
 
     // Copy data from cv::Mat to the 2D array
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
             array2[i][j] = H.at<float>(i, j);
         }
     }
@@ -135,28 +172,32 @@ void saveCoordinates()
     pugi::xml_node arrayNode2 = root.append_child("H");
 
     // Iterate over the rows of the 2D array
-    for (const auto& row : array2) {
+    for (const auto &row : array2)
+    {
         // Create a row element
         pugi::xml_node rowNode = arrayNode2.append_child("Row");
 
         // Iterate over the elements in the row
-        for (const auto& value : row) {
+        for (const auto &value : row)
+        {
             // Create a cell element
             pugi::xml_node cellNode = rowNode.append_child("Cell");
             cellNode.append_child(pugi::node_pcdata).set_value(std::to_string(value).c_str());
         }
     }
 
-
     cerr << "created H";
     // Save the XML document to a file
-    if (doc.save_file(configPath.c_str())) {
+    if (doc.save_file(configPath.c_str()))
+    {
         std::cout << "XML file saved successfully." << std::endl;
-    } else {
+    }
+    else
+    {
         std::cout << "Failed to save XML file." << std::endl;
     }
-
 }
+
 
 void computeHomography()
 {
@@ -167,109 +208,108 @@ void computeHomography()
     targetCorners.push_back(cv::Point2f(squarePositions[1][0], squarePositions[1][1]));
     targetCorners.push_back(cv::Point2f(squarePositions[2][0], squarePositions[2][1]));
     targetCorners.push_back(cv::Point2f(squarePositions[3][0], squarePositions[3][1]));
-    imageCorners = createRectPoints(0.0f, 0.0f, (float(MAZE_SIZE)-1) * wallSep, (float(MAZE_SIZE)-1) * wallSep, 0);
+    imageCorners = createRectPoints(0.0f, 0.0f, (float(MAZE_SIZE) - 1) * wallSep, (float(MAZE_SIZE) - 1) * wallSep, 0);
 
     H = findHomography(imageCorners, targetCorners);
     // H = findHomography(targetCorners, imageCorners);
 
     // cerr << H;
-
-
-}
-void loadCoordinates() {
-    pugi::xml_document doc;
-    if (!doc.load_file(configPath.c_str())) {
-        std::cout << "Failed to load XML file." << std::endl;
-        return ;
-    }
-
-    // Retrieve squarePositions
-    std::vector<std::vector<float>> squarePositions2;
-    pugi::xml_node squarePositionsNode = doc.child("config").child("squarePositions");
-    for (pugi::xml_node rowNode = squarePositionsNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row")) {
-        std::vector<float> row;        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell")) {
-            float value = std::stof(cellNode.child_value());
-            row.push_back(value);
-        }
-        squarePositions2.push_back(row);
-    }
-
-    for (int i=0; i < 4; i++){
-        for(int j=0; j<5; j++){
-            squarePositions[i][j] = squarePositions2[i][j];
-        }
-    }
-
-
-
-
-    // Retrieve H
-    std::vector<std::vector<float>> H2;
-    pugi::xml_node HNode = doc.child("config").child("H");
-    for (pugi::xml_node rowNode = HNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row")) {
-        std::vector<float> row;
-        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell")) {
-            float value = std::stof(cellNode.child_value());
-            row.push_back(value);
-        }
-        H2.push_back(row);
-    }
-    for (int i; i < 3; i++){
-        for(int j; j<3; j++){
-            H.at<float>(i,j) = H2[i][j];
-        }
-    }
-
 }
 
 
-void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+/// @ref: GLFW/glfw3.h for keybindings enum
+void callbackKeyBinding(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
 
     glfwMakeContextCurrent(window);
 
+    // Any key release action
+    // Any key release action
     if (action == GLFW_RELEASE)
     {
+        // Image selector keys [1-4]
+
+        // Top-left square
+        // Image selector keys [1-4]
+
+        // Top-left square
         if (key == GLFW_KEY_1)
         {
             selectedSquare = 0;
         }
+        // Top-right square
+        // Top-right square
         else if (key == GLFW_KEY_2)
         {
             selectedSquare = 1;
         }
+        // Bottom-right square
+        // Bottom-right square
         else if (key == GLFW_KEY_3)
         {
             selectedSquare = 2;
         }
+        // Bottom-left square
+        // Bottom-left square
         else if (key == GLFW_KEY_4)
         {
             selectedSquare = 3;
         }
+
+        // Save coordinates to CSV
+
+        // Save coordinates to CSV
         else if (key == GLFW_KEY_ENTER)
         {
             ROS_ERROR("save hit");
             saveCoordinates();
         }
+
+        // Set image to image 1
+
+        // Set image to image 1
+        else if (key == GLFW_KEY_C){
+            imageNumber = 1;
+        }
+        // Set image to image 2
+        // Set image to image 2
+        else if (key == GLFW_KEY_T){
+            imageNumber = 0;
+        }
+
+        // Change mode keys [P, D, S]
+
+        // Square position [up, down, left, right]
         else if (key == GLFW_KEY_P)
         {
             changeMode = "pos";
         }
-        else if (key == GLFW_KEY_C){
-            imageNumber = 1;
+        // Square height [up, down]
+        /// @note: can only select squares 1-3
+
+        // Change mode keys [P, D, S]
+
+        // Square position [up, down, left, right]
+        else if (key == GLFW_KEY_P)
+        {
+            changeMode = "pos";
         }
-        else if (key == GLFW_KEY_T){
-            imageNumber = 0;
-        }
+        // Square height [up, down]
+        /// @note: can only select squares 1-3
         else if (key == GLFW_KEY_D)
         {
             changeMode = "dimensions";
         }
+        // Square shear [up, down]
+        /// @note: can only select squares 1-3
+        // Square shear [up, down]
+        /// @note: can only select squares 1-3
         else if (key == GLFW_KEY_S)
         {
             changeMode = "shear";
         }
-
+        // Load coordinates from CSV
+        // Load coordinates from CSV
         else if (key == GLFW_KEY_L){
             loadCoordinates();
         }
@@ -311,7 +351,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
         }
         else if (key == GLFW_KEY_M)
         {
-            ROS_ERROR(windowName.c_str()); //this should be showing something in the terminal, but isn't atm
+            ROS_ERROR(windowName.c_str()); // this should be showing something in the terminal, but isn't atm
             monitors = glfwGetMonitors(&monitor_count);
             monitorNumber++;
             monitor = monitors[monitorNumber % monitor_count];
@@ -327,7 +367,8 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     }
     else if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
-        if (key == GLFW_KEY_ENTER){
+        if (key == GLFW_KEY_ENTER)
+        {
             cerr << "stuffies";
             ROS_ERROR("BRO DOES THIS WORK?");
         }
@@ -382,6 +423,19 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     computeHomography();
 }
 
+
+void callbackFrameBufferSize(GLFWwindow *window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+
+
+static void callbackError(int error, const char *description)
+{
+    ROS_ERROR("Error: %s\n", description);
+}
+
+
 void drawTarget(float x, float y, float targetWidth, float targetHeight)
 {
     glBegin(GL_QUADS);
@@ -395,6 +449,7 @@ void drawTarget(float x, float y, float targetWidth, float targetHeight)
 
     glEnd();
 }
+
 
 void drawRect(vector<cv::Point2f> corners, int imageNumber)
 {
@@ -447,8 +502,8 @@ void drawWalls()
         {
             glBindTexture(GL_TEXTURE_2D, fboTexture);
 
-            shearAmount = shear4 + (i / (float(MAZE_SIZE)-1)) * (shear3 - shear4) + (j / (float(MAZE_SIZE)-1)) * (shear1 - shear4);
-            float heightAmount = height4 + (i / float(MAZE_SIZE)-1) * (height3 - height4) + (j / (float(MAZE_SIZE)-1)) * (height1 - height4);
+            shearAmount = shear4 + (i / (float(MAZE_SIZE) - 1)) * (shear3 - shear4) + (j / (float(MAZE_SIZE) - 1)) * (shear1 - shear4);
+            float heightAmount = height4 + (i / float(MAZE_SIZE) - 1) * (height3 - height4) + (j / (float(MAZE_SIZE) - 1)) * (height1 - height4);
             vector<cv::Point2f> c = createRectPoints(0.0f, 0.0f, wallWidth, heightAmount, shearAmount);
 
             for (auto it = c.begin(); it != c.end(); it++)
@@ -484,7 +539,6 @@ void drawWalls()
 }
 
 
-
 int main(int argc, char **argv)
 {
 
@@ -496,14 +550,14 @@ int main(int argc, char **argv)
     string tempPath, tempName;
 
     nh.param<string>("configPath", tempPath, "");
-    nh.param<string>("windowName", tempName,"");
+    nh.param<string>("windowName", tempName, "");
 
     configPath = tempPath.c_str();
     windowName = tempName.c_str();
 
-    ROS_ERROR("config path is:" );
+    ROS_ERROR("config path is:");
     ROS_ERROR(configPath.c_str());
-   
+
     ilInit();
 
     for (const std::string &imagePath : imagePaths)
@@ -520,7 +574,6 @@ int main(int argc, char **argv)
             // Image loaded successfully
             imageIDs.push_back(imageID);
             ROS_ERROR(imagePath.c_str());
-
 
             ROS_ERROR("Loading image: %s", iluErrorString(ilGetError()));
 
@@ -540,14 +593,12 @@ int main(int argc, char **argv)
     texWidth = ilGetInteger(IL_IMAGE_WIDTH);
     texHeight = ilGetInteger(IL_IMAGE_HEIGHT);
 
-
     // ROS_ERROR("window name is: %s", windowName);
 
     ROS_ERROR("%d", texWidth);
     ROS_ERROR("%d", texHeight);
 
-
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(callbackError);
 
     if (!glfwInit())
     {
@@ -568,11 +619,10 @@ int main(int argc, char **argv)
 
     gladLoadGL();
     glfwSwapInterval(1);
-    glfwSetKeyCallback(window, keyCallback);
+    glfwSetKeyCallback(window, callbackKeyBinding);
     GLuint textureID;
     // Set the window resize callback
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
+    glfwSetFramebufferSizeCallback(window, callbackFrameBufferSize);
 
     // Create an FBO and attach the texture to it
     glGenFramebuffers(1, &fbo);
