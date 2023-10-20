@@ -20,20 +20,27 @@ find_package(glm REQUIRED)
 find_package(OpenCV REQUIRED)
 # find_package(OpenGL REQUIRED)
 
+<<<<<<< HEAD
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
+=======
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 ## Generate messages in the 'msg' folder
- add_message_files(
+add_message_files(
 	DIRECTORY
 	msg
 	FILES
   # Message1.msg
    #Message2.msg
+<<<<<<< HEAD
  )
+=======
+)
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
+generate_messages(
    DEPENDENCIES
    std_msgs  # Or other packages containing msgs
 )
@@ -56,6 +63,7 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
+<<<<<<< HEAD
 ###########
 ## Build ##
 ###########
@@ -77,6 +85,8 @@ include_directories(${IL_INCLUDE_DIR})
 # target_link_libraries(your_target "${IL_LIB_DIR}/DevIL.lib")
 # target_link_libraries(your_target "${IL_LIB_DIR}/ILU.lib")
 # target_link_libraries(your_target "${IL_LIB_DIR}/ILUT.lib")
+=======
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -96,12 +106,30 @@ include_directories(
 
 )
 
-find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS $ENV{IL_LIB_DIR})
-find_library(ILU_LIBRARY NAMES ILU PATHS $ENV{IL_LIB_DIR})
-find_library(ILUT_LIBRARY NAMES ILUT PATHS $ENV{IL_LIB_DIR})
+# find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS $ENV{IL_LIB_DIR})
+# find_library(ILU_LIBRARY NAMES ILU PATHS $ENV{IL_LIB_DIR})
+# find_library(ILUT_LIBRARY NAMES ILUT PATHS $ENV{IL_LIB_DIR})
+
 #find_library(ILUT_LIBRARY NAMES ILUT.lib PATH "C:/Program Files (x86)/IL/lib/x64/Release/ILUT.lib")
 #find_library(IL_LIBRARY NAMES DevIL ILU ILUT PATHS ${IL_LIB_DIR})
 #find_library(DEVIL_LIBRARIES NAMES DevIL ILU ILUT PATHS ${IL_LIBRARY})
+
+# find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS "C:/ws/src/projection_calibration/dll")
+# find_library(ILU_LIBRARY NAMES ILU PATHS "C:/ws/src/projection_calibration/dll")
+# find_library(ILUT_LIBRARY NAMES ILUT PATHS "C:/ws/src/projection_calibration/dll")
+
+# set(IL_LIBRARY "C:/ws/src/projection_calibration/dll/DevIL.dll")
+# set(ILU_LIBRARY "C:/ws/src/projection_calibration/dll/ILU.dll")
+# set(ILUT_LIBRARY "C:/ws/src/projection_calibration/dll/ILUT.dll")
+
+# find_library(ILUT_LIBRARY NAMES ILUT.lib PATHS "C:/Program Files (x86)/IL/lib/x64/Release/")
+# find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS "C:/Program Files (x86)/IL/lib/x64/Release/")
+# find_library(ILU_LIBRARY NAMES ILU PATHS "C:/Program Files (x86)/IL/lib/x64/Release/")
+
+# # To these lines (Assuming your project root is the workspace root)
+find_library(ILUT_LIBRARY NAMES ILUT.lib PATHS "${CMAKE_SOURCE_DIR}/projection_calibration/dll")
+find_library(IL_LIBRARY NAMES DevIL ILU ILUT.lib PATHS "${CMAKE_SOURCE_DIR}/projection_calibration/dll")
+find_library(ILU_LIBRARY NAMES ILU PATHS "${CMAKE_SOURCE_DIR}/projection_calibration/dll")
 
 if(IL_LIBRARY)
   message(STATUS "Found IL library: ${IL_LIBRARY}")
@@ -110,11 +138,14 @@ else()
 endif()
 if(ILU_LIBRARY)
   message(STATUS "Found ILU library: ${ILU_LIBRARY}")
-#else()
-#  message(FATAL_ERROR "ILU library not found")
+else()
+  message(FATAL_ERROR "ILU library not found")
 endif()
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 add_library(GLAD src/glad.c)
 
 
@@ -128,8 +159,13 @@ add_executable(${PROJECT_NAME}_node
 	src/glad.c
 	src/glad/glad.h
 	src/glm/glm.hpp
+<<<<<<< HEAD
 	# src/learnopengl/camera.h
 	# src/learnopengl/shader_m.h
+=======
+	src/learnopengl/camera.h
+	src/learnopengl/shader_m.h
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
   src/pugixml/pugixml.cpp
   src/pugixml/pugixml.hpp
 )
@@ -137,24 +173,38 @@ add_executable(${PROJECT_NAME}_node
 # Copy DevIL.dll to the executable's directory post-build
 add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+<<<<<<< HEAD
                    ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/dll/DevIL.dll
+=======
+                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/DevIL.dll
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
                    $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
 
 # Copy ILU.dll to the executable's directory post-build
 add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+<<<<<<< HEAD
                    ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/dll/ILU.dll
+=======
+                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/ILU.dll
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
                    $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
 
 # Copy ILUT.dll to the executable's directory post-build
 add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+<<<<<<< HEAD
                    ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/dll/ILUT.dll
                    $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
 
 # set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 # set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 # set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+=======
+                   ${CMAKE_SOURCE_DIR}/projection_calibration/dll/ILUT.dll
+                   $<TARGET_FILE_DIR:${PROJECT_NAME}_node>)
+
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 
 target_link_libraries(${PROJECT_NAME}_node 
 	${catkin_LIBRARIES}
@@ -162,6 +212,7 @@ target_link_libraries(${PROJECT_NAME}_node
 	glfw GLAD # glm
   ${OpenCV_LIBRARIES}
 )
+<<<<<<< HEAD
 
 ## Print out the values of the environment variables
 message("[ENV]: PROJECT_NAME set to: ${PROJECT_NAME}")
@@ -184,72 +235,11 @@ message("[ENV]: OpenCV_DIR set to: ${OpenCV_DIR}")
 ## target back to the shorter version for ease of user use
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
 # set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
+=======
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
-#target_link_libraries(GLEW GLU glut)
-
-#############
-## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark executables for installation
-## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-# install(TARGETS ${PROJECT_NAME}_node
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
 install(TARGETS projection_calibration_node 
   DESTINATION ${PROJECT_BINARY_DIR}/lib
 )
 
-
-## Mark libraries for installation
-## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_libraries.html
-# install(TARGETS ${PROJECT_NAME}
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-# )
-
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_projection_calibration.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)

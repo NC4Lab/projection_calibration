@@ -57,6 +57,7 @@ using namespace std;
 
 // ============= METHODS =============
 
+<<<<<<< HEAD
 std::vector<cv::Point2f> createRectPoints(float, float, float, float, float);
 
 // Function to load coordinates from an XML file
@@ -88,8 +89,45 @@ void drawWalls();
 
 // The main function of the program
 int main(int, char **);
+=======
+#include <vector>
+#include <opencv2/core/core.hpp>
 
+std::vector<cv::Point2f> createRectPoints(float, float, float, float, float);
+
+// Function to save coordinates to an XML file
+void saveCoordinates();
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
+
+// Function to compute homography matrix
+void computeHomography();
+
+<<<<<<< HEAD
+#endif
+=======
+// Function to load coordinates from an XML file
+void loadCoordinates();
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
+
+// Callback function for handling window resize events
+void callbackFrameBufferSize(GLFWwindow *, int, int);
+
+// Callback function for handling GLFW errors
+static void callbackError(int, const char *);
+
+// Callback function for handling keyboard input
+void keyCallback(GLFWwindow *, int, int, int, int);
+
+// Function to draw a target
+void drawTarget(float, float, float, float);
+
+// Function to draw a rectangle with given corners
+void drawRect(vector<cv::Point2f>, int);
+
+// Function to draw multiple wall images
+void drawWalls();
+
+// The main function of your program
+int main(int, char **);
 
 #endif
-
-

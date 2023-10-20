@@ -8,17 +8,42 @@
 #include "projection.h"
 
 // ============= VARIABLES =============
+<<<<<<< HEAD
 
+=======
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 // Constants
 const int MAZE_SIZE = 3;
 
 // Variables related to square positions and transformation
 int imageNumber = 0;
 float squarePositions[4][5] = {
+<<<<<<< HEAD
     {-0.25f, 0.25f, 0.02f, 0.02f, 0.0f}, // top-left square
     {0.25f, 0.25f, 0.02f, 0.02f, 0.0f},  // top-right square
     {0.25f, -0.25f, 0.02f, 0.02f, 0.0f}, // bottom-right square
     {-0.25f, -0.25f, 0.02f, 0.02f, 0.0f} // bottom-left square
+=======
+    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
+    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
+    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
+    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
+};
+float shearValues[MAZE_SIZE][MAZE_SIZE];
+float sizeValues[MAZE_SIZE][MAZE_SIZE];
+float configurationValues[3][3][3];
+cv::Mat H = cv::Mat::eye(3, 3, CV_32F);
+int selectedSquare = 0;
+
+// Variables related to wall properties
+// Variables related to square positions and transformation
+int imageNumber = 0;
+float squarePositions[4][5] = {
+    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
+    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
+    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
+    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 };
 float shearValues[MAZE_SIZE][MAZE_SIZE];
 float sizeValues[MAZE_SIZE][MAZE_SIZE];
@@ -35,9 +60,21 @@ float shearAmount = 0.0f;
 vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight, 0);
 
 // Variables related to image and file paths
+<<<<<<< HEAD
 string packagePath = ros::package::getPath("projection_calibration");
 string configPath;
 string windowName;
+=======
+float shearAmount = 0.0f;
+vector<cv::Point2f> wallCorners = createRectPoints(0.0f, 0.0f, wallWidth, wallHeight, 0);
+
+// Variables related to image and file paths
+string packagePath = ros::package::getPath("projection_calibration");
+string configPath;
+string windowName;
+string configPath;
+string windowName;
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 
 // List of image file paths
 std::vector<std::string> imagePaths = {
@@ -50,6 +87,10 @@ std::vector<std::string> imagePaths = {
 std::vector<ILuint> imageIDs;
 
 // Variables related to window and OpenGL
+<<<<<<< HEAD
+=======
+// Variables related to window and OpenGL
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 int winWidth = 3840;
 int winHeight = 2160;
 GLFWwindow *window;
@@ -62,22 +103,36 @@ int monitor_count;
 
 ILint texWidth;
 ILint texHeight;
+<<<<<<< HEAD
+=======
+ILint texWidth;
+ILint texHeight;
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 
 // ============= METHODS =============
 
 vector<cv::Point2f> createRectPoints(float x0, float y0, float width, float height, float shearAmount)
 {
     vector<cv::Point2f> rectPoints;
+<<<<<<< HEAD
     rectPoints.push_back(cv::Point2f(x0 + height * shearAmount, y0 + height));
     rectPoints.push_back(cv::Point2f(x0 + height * shearAmount + width, y0 + height));
+=======
+    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount, y0 + height));
+    rectPoints.push_back(cv::Point2f(x0 + height*shearAmount + width, y0 + height));
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
     rectPoints.push_back(cv::Point2f(x0 + width, y0));
     rectPoints.push_back(cv::Point2f(x0, y0));
 
     return rectPoints;
 }
 
+<<<<<<< HEAD
 
 void loadCoordinates()
+=======
+void checkGLError()
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 {
     pugi::xml_document doc;
     if (!doc.load_file(configPath.c_str()))
@@ -130,10 +185,21 @@ void loadCoordinates()
     }
 }
 
+<<<<<<< HEAD
 
 void saveCoordinates()
 {
 
+=======
+static void callbackError(int error, const char *description)
+static void callbackError(int error, const char *description)
+{
+    ROS_ERROR("Error: %s\n", description);
+}
+
+void saveCoordinates()
+{
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
     pugi::xml_document doc;
     cerr << "doc created";
     // Create the root element
@@ -191,9 +257,17 @@ void saveCoordinates()
     if (doc.save_file(configPath.c_str()))
     {
         std::cout << "XML file saved successfully." << std::endl;
+<<<<<<< HEAD
     }
     else
     {
+=======
+    } else {
+        // Print configPath.c_str()
+        std::cout << configPath.c_str() << std::endl;
+        // Print configPath.c_str()
+        std::cout << configPath.c_str() << std::endl;
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
         std::cout << "Failed to save XML file." << std::endl;
     }
 }
@@ -214,11 +288,68 @@ void computeHomography()
     // H = findHomography(targetCorners, imageCorners);
 
     // cerr << H;
+<<<<<<< HEAD
+=======
+
+
 }
 
+void loadCoordinates() {
+    pugi::xml_document doc;
+    if (!doc.load_file(configPath.c_str())) {
+        std::cout << "Failed to load XML file." << std::endl;
+        return ;
+    }
+
+    // Retrieve squarePositions
+    std::vector<std::vector<float>> squarePositions2;
+    pugi::xml_node squarePositionsNode = doc.child("config").child("squarePositions");
+    for (pugi::xml_node rowNode = squarePositionsNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row")) {
+        std::vector<float> row;        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell")) {
+            float value = std::stof(cellNode.child_value());
+            row.push_back(value);
+        }
+        squarePositions2.push_back(row);
+     }
+     }
+
+    for (int i=0; i < 4; i++){
+        for(int j=0; j<5; j++){
+            squarePositions[i][j] = squarePositions2[i][j];
+        }
+    }
+
+    // Retrieve H
+    std::vector<std::vector<float>> H2;
+    pugi::xml_node HNode = doc.child("config").child("H");
+    for (pugi::xml_node rowNode = HNode.child("Row"); rowNode; rowNode = rowNode.next_sibling("Row")) {
+        std::vector<float> row;
+        for (pugi::xml_node cellNode = rowNode.child("Cell"); cellNode; cellNode = cellNode.next_sibling("Cell")) {
+            float value = std::stof(cellNode.child_value());
+            row.push_back(value);
+        }
+        H2.push_back(row);
+    }
+    for (int i; i < 3; i++){
+        for(int j; j<3; j++){
+            H.at<float>(i,j) = H2[i][j];
+        }
+    }
+
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
+}
+
+void callbackFrameBufferSize(GLFWwindow *window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
 
 /// @ref: GLFW/glfw3.h for keybindings enum
+<<<<<<< HEAD
 void callbackKeyBinding(GLFWwindow *window, int key, int scancode, int action, int mods)
+=======
+void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 {
 
     glfwMakeContextCurrent(window);
@@ -314,6 +445,8 @@ void callbackKeyBinding(GLFWwindow *window, int key, int scancode, int action, i
             loadCoordinates();
         }
 
+        // Fullscreen keys [F, M]
+        // Fullscreen keys [F, M]
         else if (key == GLFW_KEY_F)
         {
             monitors = glfwGetMonitors(&monitor_count);
@@ -349,6 +482,10 @@ void callbackKeyBinding(GLFWwindow *window, int key, int scancode, int action, i
                 glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
             }
         }
+
+        // Toggles monotor/projector in sequence
+
+        // Toggles monotor/projector in sequence
         else if (key == GLFW_KEY_M)
         {
             ROS_ERROR(windowName.c_str()); // this should be showing something in the terminal, but isn't atm
@@ -365,6 +502,10 @@ void callbackKeyBinding(GLFWwindow *window, int key, int scancode, int action, i
             }
         }
     }
+
+    // Any key press action or repeat
+
+    // Any key press action or repeat
     else if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
         if (key == GLFW_KEY_ENTER)
@@ -379,7 +520,8 @@ void callbackKeyBinding(GLFWwindow *window, int key, int scancode, int action, i
             // Listen for arrow key input to move selected square
             if (key == GLFW_KEY_LEFT)
             {
-                squarePositions[selectedSquare][0] -= 0.05f;
+                squarePositions[selectedSquare][0] -= 0.05f; // units normalized half monitor width
+                squarePositions[selectedSquare][0] -= 0.05f; // units normalized half monitor width
             }
             else if (key == GLFW_KEY_RIGHT)
             {
@@ -477,7 +619,8 @@ void drawRect(vector<cv::Point2f> corners, int imageNumber)
     glEnd();
 }
 
-
+// Draws the multiple wall images
+// Draws the multiple wall images
 void drawWalls()
 {
 
@@ -538,7 +681,10 @@ void drawWalls()
     }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 int main(int argc, char **argv)
 {
 
@@ -598,6 +744,10 @@ int main(int argc, char **argv)
     ROS_ERROR("%d", texWidth);
     ROS_ERROR("%d", texHeight);
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
     glfwSetErrorCallback(callbackError);
 
     if (!glfwInit())
@@ -623,6 +773,10 @@ int main(int argc, char **argv)
     GLuint textureID;
     // Set the window resize callback
     glfwSetFramebufferSizeCallback(window, callbackFrameBufferSize);
+<<<<<<< HEAD
+=======
+
+>>>>>>> fa00cfd333a24f2b1e6d605079da70bfbb8cfeb8
 
     // Create an FBO and attach the texture to it
     glGenFramebuffers(1, &fbo);
