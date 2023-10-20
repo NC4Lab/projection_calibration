@@ -15,10 +15,10 @@ const int MAZE_SIZE = 3;
 // Variables related to square positions and transformation
 int imageNumber = 0;
 float squarePositions[4][5] = {
-    {-0.8f, 0.8f, 0.02f, 0.02f, 0.0f}, // top-left square
-    {0.8f, 0.8f, 0.02f, 0.02f, 0.0f},  // top-right square
-    {0.8f, -0.8f, 0.02f, 0.02f, 0.0f}, // bottom-right square
-    {-0.8f, -0.8f, 0.02f, 0.02f, 0.0f} // bottom-left square
+    {-0.25f, 0.25f, 0.02f, 0.02f, 0.0f}, // top-left square
+    {0.25f, 0.25f, 0.02f, 0.02f, 0.0f},  // top-right square
+    {0.25f, -0.25f, 0.02f, 0.02f, 0.0f}, // bottom-right square
+    {-0.25f, -0.25f, 0.02f, 0.02f, 0.0f} // bottom-left square
 };
 float shearValues[MAZE_SIZE][MAZE_SIZE];
 float sizeValues[MAZE_SIZE][MAZE_SIZE];
